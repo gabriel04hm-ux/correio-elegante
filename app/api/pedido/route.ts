@@ -15,7 +15,8 @@ export async function POST(req: Request) {
       }
     )
 
-    const resultado = await response.json()
+    const texto = await response.text()
+    const resultado = JSON.parse(texto)
 
     return NextResponse.json(resultado)
   } catch (erro) {
