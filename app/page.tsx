@@ -89,17 +89,7 @@ export default function Home() {
         <img src="/banner.jpg" className="rounded-xl w-full shadow-md" />
       </div>
 
-      <div className="flex gap-4 overflow-x-auto p-4">
-        {["Amor", "Amizade", "Engraçado", "Anônimo"].map((c, i) => (
-          <div key={i} className="flex flex-col items-center min-w-[70px]">
-            <div className="w-14 h-14 bg-pink-100 rounded-full flex items-center justify-center shadow text-xl">
-              💖
-            </div>
 
-            <span className="text-xs mt-1 text-gray-700">{c}</span>
-          </div>
-        ))}
-      </div>
 
       <div className="grid grid-cols-2 gap-4 p-4">
         {filtrados.map((p) => (
