@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server"
 import { MercadoPagoConfig, Preference } from "mercadopago"
 
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    mensagem: "API de pagamento online. Use POST para criar o pagamento.",
+    tokenConfigurado: !!process.env.MERCADO_PAGO_ACCESS_TOKEN,
+    siteUrlConfigurado: process.env.NEXT_PUBLIC_SITE_URL || null,
+  })
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -8,7 +17,10 @@ export async function POST(req: Request) {
 
     if (!itens || !Array.isArray(itens) || itens.length === 0) {
       return NextResponse.json(
-        { ok: false, erro: "Itens do pagamento não enviados." },
+        {
+          ok: false,
+          erro: "Itens do pagamento não enviados.",
+        },
         { status: 400 }
       )
     }
@@ -17,7 +29,10 @@ export async function POST(req: Request) {
 
     if (!accessToken) {
       return NextResponse.json(
-        { ok: false, erro: "MERCADO_PAGO_ACCESS_TOKEN não configurado." },
+        {
+          ok: false,
+          erro: "MERCADO_PAGO_ACCESS_TOKEN não configurado na Vercel.",
+        },
         { status: 500 }
       )
     }
@@ -34,7 +49,7 @@ export async function POST(req: Request) {
       body: {
         items: itens.map((item: any) => ({
           id: String(item.id),
-          title: item.title,
+          title: String(item.title),
           quantity: Number(item.quantity),
           unit_price: Number(item.unit_price),
           currency_id: "BRL",
@@ -55,13 +70,14 @@ export async function POST(req: Request) {
       sandbox_init_point: resposta.sandbox_init_point,
       id: resposta.id,
     })
-  } catch (erro) {
+  } catch (erro: any) {
     console.error("ERRO PAGAMENTO:", erro)
 
     return NextResponse.json(
       {
         ok: false,
-        erro: String(erro),
+        erro: erro?.message || String(erro),
+        detalhe: erro?.cause || null,
       },
       { status: 500 }
     )
