@@ -16,21 +16,34 @@ export default function Cart() {
   ]
 
   useEffect(() => {
-    const data = JSON.parse(localStorage.getItem("carrinho") || "{}")
-    setCarrinho(data)
+    setCarrinho(JSON.parse(localStorage.getItem("carrinho") || "{}"))
+    setDados(JSON.parse(localStorage.getItem("carrinhoDados") || "{}"))
+    setWhats(localStorage.getItem("carrinhoWhats") || "")
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem("carrinho", JSON.stringify(carrinho))
+  }, [carrinho])
+
+  useEffect(() => {
+    localStorage.setItem("carrinhoDados", JSON.stringify(dados))
+  }, [dados])
+
+  useEffect(() => {
+    localStorage.setItem("carrinhoWhats", whats)
+  }, [whats])
 
   function alterar(id: number, tipo: string) {
     const novo = { ...carrinho }
 
     if (tipo === "mais") novo[id] = (novo[id] || 0) + 1
+
     if (tipo === "menos") {
       novo[id] = (novo[id] || 0) - 1
       if (novo[id] <= 0) delete novo[id]
     }
 
     setCarrinho(novo)
-    localStorage.setItem("carrinho", JSON.stringify(novo))
   }
 
   function atualizarCampo(produtoId: number, index: number, campo: string, valor: any) {
@@ -65,36 +78,60 @@ export default function Cart() {
     const numeroLimpo = whats.replace(/\D/g, "")
 
     if (!numeroLimpo) return alert("Digite seu WhatsApp")
+
     if (!/^\d{10,11}$/.test(numeroLimpo))
       return alert("Digite o WhatsApp com DDD. Ex: 31999999999")
 
     const pedido: any[] = []
 
-    Object.keys(dados).forEach((produtoId) => {
-      dados[produtoId].forEach((item: any) => {
+    for (const produtoId of Object.keys(carrinho)) {
+      const quantidade = carrinho[produtoId]
+
+      for (let i = 0; i < quantidade; i++) {
+        const item = dados?.[produtoId]?.[i]
+
+        // 🔴 VALIDAÇÃO OBRIGATÓRIA
+        if (!item?.nome) {
+          alert(`Preencha o nome de quem recebe (Produto ${produtoId} - Mensagem ${i + 1})`)
+          return
+        }
+
+        if (!item?.sala) {
+          alert(`Selecione a sala (Produto ${produtoId} - Mensagem ${i + 1})`)
+          return
+        }
+
+        if (!item?.mensagem) {
+          alert(`Digite a mensagem (Produto ${produtoId} - Mensagem ${i + 1})`)
+          return
+        }
+
         pedido.push({
           produto: produtoId,
-          mensagem: item.mensagem || "",
+          mensagem: item.mensagem,
           remetente: item.anonimo ? "Anônimo" : item.remetente || "",
-          destinatario: item.nome || "",
-          sala: item.sala || "",
+          destinatario: item.nome,
+          sala: item.sala,
           whatsapp: numeroLimpo,
         })
-      })
-    })
+      }
+    }
 
-    if (pedido.length === 0) return alert("Preencha pelo menos uma mensagem")
+    if (pedido.length === 0) {
+      alert("Preencha pelo menos uma mensagem")
+      return
+    }
 
     try {
       const response = await fetch("/api/pedido", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(pedido),
       })
 
       const resultado = await response.json()
-
-      console.log("RESPOSTA:", resultado)
 
       if (!resultado.ok) {
         alert(resultado.erro || "Erro ao enviar pedido")
@@ -104,6 +141,9 @@ export default function Cart() {
       alert("Pedido enviado com sucesso! Nº " + resultado.numeroPedido)
 
       localStorage.removeItem("carrinho")
+      localStorage.removeItem("carrinhoDados")
+      localStorage.removeItem("carrinhoWhats")
+
       location.reload()
     } catch (err) {
       console.error(err)
@@ -131,30 +171,58 @@ export default function Cart() {
 
           {Array.from({ length: carrinho[p.id] }).map((_, i) => (
             <div key={i} className="mt-3 border p-3 rounded">
+
               <textarea
-                placeholder="Mensagem"
+                placeholder="Mensagem *"
                 className="w-full border p-2"
+                value={dados?.[p.id]?.[i]?.mensagem || ""}
                 onChange={(e) => atualizarCampo(p.id, i, "mensagem", e.target.value)}
               />
 
               <input
-                placeholder="Quem envia"
+                placeholder="Nome de quem recebe *"
                 className="w-full border p-2 mt-2"
-                onChange={(e) => atualizarCampo(p.id, i, "remetente", e.target.value)}
-              />
-
-              <input
-                placeholder="Quem recebe"
-                className="w-full border p-2 mt-2"
+                value={dados?.[p.id]?.[i]?.nome || ""}
                 onChange={(e) => atualizarCampo(p.id, i, "nome", e.target.value)}
               />
+
+              <select
+                className="w-full border p-2 mt-2"
+                value={dados?.[p.id]?.[i]?.sala || ""}
+                onChange={(e) => atualizarCampo(p.id, i, "sala", e.target.value)}
+              >
+                <option value="">Selecione a sala *</option>
+                <option>Professor(a)</option>
+                <option>1º Informática</option>
+                <option>2º Informática</option>
+                <option>3º Informática</option>
+              </select>
+
+              {!dados?.[p.id]?.[i]?.anonimo && (
+                <input
+                  placeholder="Seu nome (opcional)"
+                  className="w-full border p-2 mt-2"
+                  value={dados?.[p.id]?.[i]?.remetente || ""}
+                  onChange={(e) => atualizarCampo(p.id, i, "remetente", e.target.value)}
+                />
+              )}
+
+              <label className="flex gap-2 mt-2">
+                <input
+                  type="checkbox"
+                  checked={dados?.[p.id]?.[i]?.anonimo || false}
+                  onChange={(e) => atualizarCampo(p.id, i, "anonimo", e.target.checked)}
+                />
+                Enviar anonimamente
+              </label>
+
             </div>
           ))}
         </div>
       ))}
 
       <input
-        placeholder="(31) 99999-9999"
+        placeholder="Seu WhatsApp (ex: (31) 99999-9999)"
         className="w-full border p-2 mt-3"
         value={formatarWhats(whats)}
         onChange={(e) => setWhats(e.target.value.replace(/\D/g, "").slice(0, 11))}
