@@ -63,6 +63,20 @@ export default function Cart() {
     })
   }
 
+  function formatarWhats(valor: string) {
+    const numeros = valor.replace(/\D/g, "")
+
+    if (numeros.length <= 2) {
+      return numeros
+    }
+
+    if (numeros.length <= 7) {
+      return `(${numeros.slice(0, 2)}) ${numeros.slice(2)}`
+    }
+
+    return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7, 11)}`
+  }
+
   async function finalizarPedido() {
     const numeroLimpo = whats.replace(/\D/g, "")
 
@@ -107,9 +121,21 @@ export default function Cart() {
 
       const resultado = await response.json()
 
-      if (!response.ok || !resultado.ok) {
+      if (!response.ok) {
         console.error(resultado)
         alert("Erro ao enviar pedido")
+        return
+      }
+
+      if (!resultado.ok) {
+        console.error(resultado)
+        alert(resultado.erro || "Erro ao enviar pedido")
+        return
+      }
+
+      if (!resultado.numeroPedido) {
+        console.error("Resposta sem numeroPedido:", resultado)
+        alert("Pedido enviado, mas o número do pedido não foi retornado.")
         return
       }
 
@@ -242,14 +268,13 @@ export default function Cart() {
       ))}
 
       <input
-        placeholder="Seu WhatsApp com DDD (ex: 31999999999)"
+        placeholder="Seu WhatsApp (ex: (31) 99999-9999)"
         className="w-full border border-gray-300 rounded p-2 mt-3 text-black bg-white"
-        value={whats}
+        value={formatarWhats(whats)}
         inputMode="numeric"
-        maxLength={11}
         onChange={(e) => {
-          const somenteNumeros = e.target.value.replace(/\D/g, "")
-          setWhats(somenteNumeros)
+          const numeros = e.target.value.replace(/\D/g, "").slice(0, 11)
+          setWhats(numeros)
         }}
       />
 

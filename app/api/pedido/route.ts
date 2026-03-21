@@ -12,11 +12,27 @@ export async function POST(req: Request) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(pedido),
+        redirect: "follow",
       }
     )
 
     const texto = await response.text()
-    const resultado = JSON.parse(texto)
+
+    let resultado: any
+
+    try {
+      resultado = JSON.parse(texto)
+    } catch {
+      console.error("Resposta inválida do Apps Script:", texto)
+
+      return NextResponse.json(
+        {
+          ok: false,
+          erro: "Resposta inválida do Apps Script",
+        },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(resultado)
   } catch (erro) {
