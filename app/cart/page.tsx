@@ -143,7 +143,6 @@ export default function Cart() {
     try {
       setCarregando(true)
 
-      // 1) salva o pedido e recebe o número
       const responsePedido = await fetch("/api/pedido", {
         method: "POST",
         headers: {
@@ -154,19 +153,24 @@ export default function Cart() {
 
       const resultadoPedido = await responsePedido.json()
 
+      if (!responsePedido.ok) {
+        alert("Erro HTTP em /api/pedido: " + JSON.stringify(resultadoPedido))
+        setCarregando(false)
+        return
+      }
+
       if (!resultadoPedido.ok) {
-        alert(resultadoPedido.erro || "Erro ao registrar pedido")
+        alert("Erro ao registrar pedido: " + JSON.stringify(resultadoPedido))
         setCarregando(false)
         return
       }
 
       if (!resultadoPedido.numeroPedido) {
-        alert("O pedido foi registrado, mas não retornou número do pedido")
+        alert("Pedido sem número retornado: " + JSON.stringify(resultadoPedido))
         setCarregando(false)
         return
       }
 
-      // 2) cria o pagamento no Mercado Pago
       const responsePagamento = await fetch("/api/pedido/pagamento", {
         method: "POST",
         headers: {
@@ -180,8 +184,14 @@ export default function Cart() {
 
       const resultadoPagamento = await responsePagamento.json()
 
+      if (!responsePagamento.ok) {
+        alert("Erro HTTP em /api/pedido/pagamento: " + JSON.stringify(resultadoPagamento))
+        setCarregando(false)
+        return
+      }
+
       if (!resultadoPagamento.ok) {
-        alert(resultadoPagamento.erro || "Erro ao gerar pagamento")
+        alert("Erro ao gerar pagamento: " + JSON.stringify(resultadoPagamento))
         setCarregando(false)
         return
       }
@@ -190,7 +200,7 @@ export default function Cart() {
         resultadoPagamento.init_point || resultadoPagamento.sandbox_init_point
 
       if (!linkPagamento) {
-        alert("O Mercado Pago não retornou o link de pagamento")
+        alert("Link de pagamento não retornado: " + JSON.stringify(resultadoPagamento))
         setCarregando(false)
         return
       }
@@ -200,9 +210,8 @@ export default function Cart() {
       localStorage.removeItem("carrinhoWhats")
 
       window.location.href = linkPagamento
-    } catch (err) {
-      console.error(err)
-      alert("Erro ao finalizar pedido")
+    } catch (err: any) {
+      alert("Erro no catch: " + (err?.message || String(err)))
       setCarregando(false)
     }
   }
