@@ -6,6 +6,7 @@ export default function Cart() {
   const [carrinho, setCarrinho] = useState<any>({})
   const [dados, setDados] = useState<any>({})
   const [whats, setWhats] = useState("")
+  const [carregando, setCarregando] = useState(false)
 
   const produtos = [
     { id: 1, nome: "Produto 1", preco: 5 },
@@ -36,7 +37,9 @@ export default function Cart() {
   function alterar(id: number, tipo: string) {
     const novo = { ...carrinho }
 
-    if (tipo === "mais") novo[id] = (novo[id] || 0) + 1
+    if (tipo === "mais") {
+      novo[id] = (novo[id] || 0) + 1
+    }
 
     if (tipo === "menos") {
       novo[id] = (novo[id] || 0) - 1
@@ -77,10 +80,15 @@ export default function Cart() {
   async function finalizarPedido() {
     const numeroLimpo = whats.replace(/\D/g, "")
 
-    if (!numeroLimpo) return alert("Digite seu WhatsApp")
+    if (!numeroLimpo) {
+      alert("Digite seu WhatsApp")
+      return
+    }
 
-    if (!/^\d{10,11}$/.test(numeroLimpo))
-      return alert("Digite o WhatsApp com DDD. Ex: 31999999999")
+    if (!/^\d{10,11}$/.test(numeroLimpo)) {
+      alert("Digite o WhatsApp com DDD. Ex: 31999999999")
+      return
+    }
 
     const pedido: any[] = []
 
@@ -90,39 +98,53 @@ export default function Cart() {
       for (let i = 0; i < quantidade; i++) {
         const item = dados?.[produtoId]?.[i]
 
-        if (!item?.nome) {
-          alert(`Preencha o nome de quem recebe (Produto ${produtoId} - Mensagem ${i + 1})`)
+        if (!item?.mensagem?.trim()) {
+          alert(`Digite a mensagem do item ${i + 1} do produto ${produtoId}`)
           return
         }
 
-        if (!item?.sala) {
-          alert(`Selecione a sala (Produto ${produtoId} - Mensagem ${i + 1})`)
+        if (!item?.nome?.trim()) {
+          alert(`Preencha o nome de quem recebe no item ${i + 1} do produto ${produtoId}`)
           return
         }
 
-        if (!item?.mensagem) {
-          alert(`Digite a mensagem (Produto ${produtoId} - Mensagem ${i + 1})`)
+        if (!item?.sala?.trim()) {
+          alert(`Selecione a sala no item ${i + 1} do produto ${produtoId}`)
           return
         }
 
         pedido.push({
           produto: produtoId,
-          mensagem: item.mensagem,
-          remetente: item.anonimo ? "Anônimo" : item.remetente || "",
-          destinatario: item.nome,
-          sala: item.sala,
+          mensagem: item.mensagem.trim(),
+          remetente: item.anonimo ? "Anônimo" : (item.remetente || "").trim(),
+          destinatario: item.nome.trim(),
+          sala: item.sala.trim(),
           whatsapp: numeroLimpo,
         })
       }
     }
 
     if (pedido.length === 0) {
-      alert("Preencha pelo menos uma mensagem")
+      alert("Seu carrinho está vazio")
       return
     }
 
+    const itensPagamento = Object.keys(carrinho).map((produtoId) => {
+      const produto = produtos.find((p) => p.id === Number(produtoId))
+
+      return {
+        id: produtoId,
+        title: produto?.nome || `Produto ${produtoId}`,
+        quantity: Number(carrinho[produtoId]),
+        unit_price: Number(produto?.preco || 0),
+      }
+    })
+
     try {
-      const response = await fetch("/api/pedido", {
+      setCarregando(true)
+
+      // 1) salva o pedido e recebe o número
+      const responsePedido = await fetch("/api/pedido", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -130,23 +152,58 @@ export default function Cart() {
         body: JSON.stringify(pedido),
       })
 
-      const resultado = await response.json()
+      const resultadoPedido = await responsePedido.json()
 
-      if (!resultado.ok) {
-        alert(resultado.erro || "Erro ao enviar pedido")
+      if (!resultadoPedido.ok) {
+        alert(resultadoPedido.erro || "Erro ao registrar pedido")
+        setCarregando(false)
         return
       }
 
-      alert("Pedido enviado com sucesso! Nº " + resultado.numeroPedido)
+      if (!resultadoPedido.numeroPedido) {
+        alert("O pedido foi registrado, mas não retornou número do pedido")
+        setCarregando(false)
+        return
+      }
+
+      // 2) cria o pagamento no Mercado Pago
+      const responsePagamento = await fetch("/api/pedido/pagamento", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          itens: itensPagamento,
+          numeroPedido: resultadoPedido.numeroPedido,
+        }),
+      })
+
+      const resultadoPagamento = await responsePagamento.json()
+
+      if (!resultadoPagamento.ok) {
+        alert(resultadoPagamento.erro || "Erro ao gerar pagamento")
+        setCarregando(false)
+        return
+      }
+
+      const linkPagamento =
+        resultadoPagamento.init_point || resultadoPagamento.sandbox_init_point
+
+      if (!linkPagamento) {
+        alert("O Mercado Pago não retornou o link de pagamento")
+        setCarregando(false)
+        return
+      }
 
       localStorage.removeItem("carrinho")
       localStorage.removeItem("carrinhoDados")
       localStorage.removeItem("carrinhoWhats")
 
-      location.reload()
+      window.location.href = linkPagamento
     } catch (err) {
       console.error(err)
-      alert("Erro ao enviar pedido")
+      alert("Erro ao finalizar pedido")
+      setCarregando(false)
     }
   }
 
@@ -162,107 +219,116 @@ export default function Cart() {
           <h2 className="font-semibold text-lg text-black">{p.nome}</h2>
           <p className="text-pink-600 font-bold">R$ {p.preco}</p>
 
-          <div className="flex gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-2">
             <button
               onClick={() => alterar(p.id, "menos")}
-              className="bg-gray-300 px-3 py-1 rounded"
+              className="bg-gray-300 px-3 py-1 rounded text-black"
             >
               -
             </button>
 
-            <span>{carrinho[p.id]}</span>
+            <span className="text-black">{carrinho[p.id]}</span>
 
             <button
               onClick={() => alterar(p.id, "mais")}
-              className="bg-gray-300 px-3 py-1 rounded"
+              className="bg-gray-300 px-3 py-1 rounded text-black"
             >
               +
             </button>
           </div>
 
-          {Array.from({ length: carrinho[p.id] }).map((_, i) => (
-            <div key={i} className="mt-3 border p-3 rounded">
-              <textarea
-                placeholder="Mensagem *"
-                className="w-full border p-2"
-                value={dados?.[p.id]?.[i]?.mensagem || ""}
-                onChange={(e) => atualizarCampo(p.id, i, "mensagem", e.target.value)}
-              />
+          <div className="mt-4 space-y-4">
+            {Array.from({ length: carrinho[p.id] }).map((_, i) => (
+              <div key={i} className="bg-white border border-gray-200 p-3 rounded-lg">
+                <p className="text-sm font-semibold mb-2 text-black">
+                  Mensagem {i + 1}
+                </p>
 
-              <input
-                placeholder="Nome de quem recebe *"
-                className="w-full border p-2 mt-2"
-                value={dados?.[p.id]?.[i]?.nome || ""}
-                onChange={(e) => atualizarCampo(p.id, i, "nome", e.target.value)}
-              />
-
-              <select
-                className="w-full border p-2 mt-2"
-                value={dados?.[p.id]?.[i]?.sala || ""}
-                onChange={(e) => atualizarCampo(p.id, i, "sala", e.target.value)}
-              >
-                <option value="">Selecione a sala *</option>
-
-                <option>Professor(a)</option>
-
-                <option>1º Eletrônica</option>
-                <option>1º Ene. Renovável</option>
-                <option>1º Fab. Mecânica</option>
-                <option>1º Informática</option>
-                <option>1º Logística</option>
-                <option>1º Seg. Trabalho</option>
-
-                <option>2º Eletrônica</option>
-                <option>2º Ene. Renovável</option>
-                <option>2º Fab. Mecânica</option>
-                <option>2º Informática</option>
-                <option>2º Logística</option>
-                <option>2º Seg. Trabalho</option>
-
-                <option>3º Eletrônica</option>
-                <option>3º Informática</option>
-                <option>3º Logística</option>
-                <option>3º Propedêutico</option>
-                <option>3º Seg. Trabalho</option>
-              </select>
-
-              {!dados?.[p.id]?.[i]?.anonimo && (
-                <input
-                  placeholder="Seu nome (opcional)"
-                  className="w-full border p-2 mt-2"
-                  value={dados?.[p.id]?.[i]?.remetente || ""}
-                  onChange={(e) => atualizarCampo(p.id, i, "remetente", e.target.value)}
+                <textarea
+                  placeholder="Mensagem *"
+                  className="w-full border border-gray-300 rounded p-2 text-sm text-black bg-white"
+                  value={dados?.[p.id]?.[i]?.mensagem || ""}
+                  onChange={(e) => atualizarCampo(p.id, i, "mensagem", e.target.value)}
                 />
-              )}
 
-              <label className="flex gap-2 mt-2">
                 <input
-                  type="checkbox"
-                  checked={dados?.[p.id]?.[i]?.anonimo || false}
-                  onChange={(e) => atualizarCampo(p.id, i, "anonimo", e.target.checked)}
+                  placeholder="Nome de quem recebe *"
+                  className="w-full border border-gray-300 rounded p-2 mt-2 text-sm text-black bg-white"
+                  value={dados?.[p.id]?.[i]?.nome || ""}
+                  onChange={(e) => atualizarCampo(p.id, i, "nome", e.target.value)}
                 />
-                Enviar anonimamente
-              </label>
-            </div>
-          ))}
+
+                <select
+                  className="w-full border border-gray-300 rounded p-2 mt-2 text-sm text-black bg-white"
+                  value={dados?.[p.id]?.[i]?.sala || ""}
+                  onChange={(e) => atualizarCampo(p.id, i, "sala", e.target.value)}
+                >
+                  <option value="">Selecione a sala *</option>
+
+                  <option>Professor(a)</option>
+
+                  <option>1º Eletrônica</option>
+                  <option>1º Ene. Renovável</option>
+                  <option>1º Fab. Mecânica</option>
+                  <option>1º Informática</option>
+                  <option>1º Logística</option>
+                  <option>1º Seg. Trabalho</option>
+
+                  <option>2º Eletrônica</option>
+                  <option>2º Ene. Renovável</option>
+                  <option>2º Fab. Mecânica</option>
+                  <option>2º Informática</option>
+                  <option>2º Logística</option>
+                  <option>2º Seg. Trabalho</option>
+
+                  <option>3º Eletrônica</option>
+                  <option>3º Informática</option>
+                  <option>3º Logística</option>
+                  <option>3º Propedêutico</option>
+                  <option>3º Seg. Trabalho</option>
+                </select>
+
+                {!dados?.[p.id]?.[i]?.anonimo && (
+                  <input
+                    placeholder="Seu nome (opcional)"
+                    className="w-full border border-gray-300 rounded p-2 mt-2 text-sm text-black bg-white"
+                    value={dados?.[p.id]?.[i]?.remetente || ""}
+                    onChange={(e) => atualizarCampo(p.id, i, "remetente", e.target.value)}
+                  />
+                )}
+
+                <label className="flex items-center gap-2 mt-2 text-sm text-black">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 accent-pink-500"
+                    checked={dados?.[p.id]?.[i]?.anonimo || false}
+                    onChange={(e) => atualizarCampo(p.id, i, "anonimo", e.target.checked)}
+                  />
+                  Enviar anonimamente
+                </label>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
 
       <input
         placeholder="Seu WhatsApp (ex: (31) 99999-9999)"
-        className="w-full border p-2 mt-3"
+        className="w-full border border-gray-300 rounded p-2 mt-3 text-black bg-white"
         value={formatarWhats(whats)}
+        inputMode="numeric"
         onChange={(e) => setWhats(e.target.value.replace(/\D/g, "").slice(0, 11))}
       />
 
-      <div className="mt-4">
-        <h2>Total: R$ {total}</h2>
+      <div className="bg-white p-4 rounded-xl shadow mt-4">
+        <h2 className="font-bold text-lg text-black">Total: R$ {total}</h2>
 
         <button
           onClick={finalizarPedido}
-          className="w-full bg-green-500 text-white p-2 mt-2"
+          disabled={carregando}
+          className="mt-3 w-full bg-green-500 text-white py-2 rounded-lg disabled:opacity-60"
         >
-          Confirmar Pedido
+          {carregando ? "Gerando pagamento..." : "Confirmar Pedido e Ir para Pagamento"}
         </button>
       </div>
     </div>
