@@ -8,42 +8,16 @@ export async function POST(req: Request) {
       "https://script.google.com/macros/s/AKfycbyPWSvP56h4zq8V_UXXOx8sP5bFFbQajksq0NyAVFkA-HWuZMm8sH_iLFpo4-tVmT577A/exec",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(pedido),
-        redirect: "follow",
       }
     )
 
     const texto = await response.text()
+    console.log("RESPOSTA RAW:", texto)
 
-    let resultado: any
-
-    try {
-      resultado = JSON.parse(texto)
-    } catch {
-      console.error("Resposta inválida do Apps Script:", texto)
-
-      return NextResponse.json(
-        {
-          ok: false,
-          erro: "Resposta inválida do Apps Script",
-        },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json(resultado)
+    return NextResponse.json(JSON.parse(texto))
   } catch (erro) {
-    console.error("ERRO API:", erro)
-
-    return NextResponse.json(
-      {
-        ok: false,
-        erro: String(erro),
-      },
-      { status: 500 }
-    )
+    return NextResponse.json({ ok: false, erro: String(erro) })
   }
 }
