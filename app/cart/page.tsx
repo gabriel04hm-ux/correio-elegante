@@ -90,7 +90,6 @@ export default function Cart() {
       for (let i = 0; i < quantidade; i++) {
         const item = dados?.[produtoId]?.[i]
 
-        // 🔴 VALIDAÇÃO OBRIGATÓRIA
         if (!item?.nome) {
           alert(`Preencha o nome de quem recebe (Produto ${produtoId} - Mensagem ${i + 1})`)
           return
@@ -164,14 +163,25 @@ export default function Cart() {
           <p className="text-pink-600 font-bold">R$ {p.preco}</p>
 
           <div className="flex gap-2 mt-2">
-            <button onClick={() => alterar(p.id, "menos")} className="bg-gray-300 px-3 py-1 rounded">-</button>
+            <button
+              onClick={() => alterar(p.id, "menos")}
+              className="bg-gray-300 px-3 py-1 rounded"
+            >
+              -
+            </button>
+
             <span>{carrinho[p.id]}</span>
-            <button onClick={() => alterar(p.id, "mais")} className="bg-gray-300 px-3 py-1 rounded">+</button>
+
+            <button
+              onClick={() => alterar(p.id, "mais")}
+              className="bg-gray-300 px-3 py-1 rounded"
+            >
+              +
+            </button>
           </div>
 
           {Array.from({ length: carrinho[p.id] }).map((_, i) => (
             <div key={i} className="mt-3 border p-3 rounded">
-
               <textarea
                 placeholder="Mensagem *"
                 className="w-full border p-2"
@@ -192,10 +202,28 @@ export default function Cart() {
                 onChange={(e) => atualizarCampo(p.id, i, "sala", e.target.value)}
               >
                 <option value="">Selecione a sala *</option>
+
                 <option>Professor(a)</option>
+
+                <option>1º Eletrônica</option>
+                <option>1º Ene. Renovável</option>
+                <option>1º Fab. Mecânica</option>
                 <option>1º Informática</option>
+                <option>1º Logística</option>
+                <option>1º Seg. Trabalho</option>
+
+                <option>2º Eletrônica</option>
+                <option>2º Ene. Renovável</option>
+                <option>2º Fab. Mecânica</option>
                 <option>2º Informática</option>
+                <option>2º Logística</option>
+                <option>2º Seg. Trabalho</option>
+
+                <option>3º Eletrônica</option>
                 <option>3º Informática</option>
+                <option>3º Logística</option>
+                <option>3º Propedêutico</option>
+                <option>3º Seg. Trabalho</option>
               </select>
 
               {!dados?.[p.id]?.[i]?.anonimo && (
@@ -215,7 +243,6 @@ export default function Cart() {
                 />
                 Enviar anonimamente
               </label>
-
             </div>
           ))}
         </div>
