@@ -1,83 +1,63 @@
 import { NextResponse } from "next/server"
 import { MercadoPagoConfig, Preference } from "mercadopago"
 
-export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    mensagem: "API de pagamento online. Use POST para criar o pagamento.",
-    tokenConfigurado: !!process.env.MERCADO_PAGO_ACCESS_TOKEN,
-    siteUrlConfigurado: process.env.NEXT_PUBLIC_SITE_URL || null,
-  })
-}
-
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
-    const { itens, numeroPedido } = body
+    const { itens, numeroPedido } = await req.json()
 
-    if (!itens || !Array.isArray(itens) || itens.length === 0) {
+    const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+
+    if (!token) {
       return NextResponse.json(
         {
           ok: false,
-          erro: "Itens do pagamento não enviados.",
-        },
-        { status: 400 }
-      )
-    }
-
-    const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN
-
-    if (!accessToken) {
-      return NextResponse.json(
-        {
-          ok: false,
-          erro: "MERCADO_PAGO_ACCESS_TOKEN não configurado na Vercel.",
+          error: "Token do Mercado Pago não encontrado no .env.local",
         },
         { status: 500 }
       )
     }
 
+    if (!itens || !Array.isArray(itens) || itens.length === 0) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Itens do pagamento não enviados corretamente",
+        },
+        { status: 400 }
+      )
+    }
+
     const client = new MercadoPagoConfig({
-      accessToken,
+      accessToken: token,
     })
 
     const preference = new Preference(client)
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
-
-    const resposta = await preference.create({
+    const res = await preference.create({
       body: {
-        items: itens.map((item: any) => ({
-          id: String(item.id),
-          title: String(item.title),
-          quantity: Number(item.quantity),
-          unit_price: Number(item.unit_price),
-          currency_id: "BRL",
-        })),
+        items: itens,
+        external_reference: String(numeroPedido || ""),
         back_urls: {
           success: `${siteUrl}/checkout?status=success`,
           failure: `${siteUrl}/checkout?status=failure`,
           pending: `${siteUrl}/checkout?status=pending`,
         },
         auto_return: "approved",
-        external_reference: numeroPedido ? String(numeroPedido) : undefined,
       },
     })
 
     return NextResponse.json({
       ok: true,
-      init_point: resposta.init_point,
-      sandbox_init_point: resposta.sandbox_init_point,
-      id: resposta.id,
+      init_point: res.init_point,
     })
-  } catch (erro: any) {
-    console.error("ERRO PAGAMENTO:", erro)
+  } catch (error: any) {
+    console.error("Erro em /api/pedido/pagamento:", error)
 
     return NextResponse.json(
       {
         ok: false,
-        erro: erro?.message || String(erro),
-        detalhe: erro?.cause || null,
+        error: error?.message || "Erro interno ao criar pagamento",
       },
       { status: 500 }
     )

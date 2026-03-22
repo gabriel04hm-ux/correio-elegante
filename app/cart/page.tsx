@@ -1,25 +1,57 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import Link from "next/link"
+import { useEffect, useMemo, useState } from "react"
 
-export default function Cart() {
-  const [carrinho, setCarrinho] = useState<any>({})
-  const [dados, setDados] = useState<any>({})
+type Produto = {
+  id: number
+  nome: string
+  preco: number
+  imagem?: string
+}
+
+type DadosItem = {
+  mensagem: string
+  remetente: string
+  nome: string
+  sala: string
+}
+
+export default function CartPage() {
+  const [carrinho, setCarrinho] = useState<Record<number, number>>({})
+  const [dados, setDados] = useState<Record<number, DadosItem[]>>({})
   const [whats, setWhats] = useState("")
   const [carregando, setCarregando] = useState(false)
 
-  const produtos = [
-    { id: 1, nome: "Produto 1", preco: 5 },
-    { id: 2, nome: "Produto 2", preco: 6 },
-    { id: 3, nome: "Produto 3", preco: 4 },
-    { id: 4, nome: "Produto 4", preco: 7 },
-    { id: 5, nome: "Produto 5", preco: 3 },
+  const produtos: Produto[] = [
+    { id: 1, nome: "Produto 1", preco: 5, imagem: "/p1.jpg" },
+    { id: 2, nome: "Produto 2", preco: 6, imagem: "/p2.jpg" },
+    { id: 3, nome: "Produto 3", preco: 7, imagem: "/p3.jpg" },
+    { id: 4, nome: "Produto 4", preco: 8, imagem: "/p4.jpg" },
+    { id: 5, nome: "Produto 5", preco: 10, imagem: "/p5.jpg" },
+  ]
+
+  const salas = [
+    "Sala 1",
+    "Sala 2",
+    "Sala 3",
+    "Sala 4",
+    "Sala 5",
+    "Sala 6",
+    "Sala 7",
+    "Sala 8",
+    "Sala 9",
+    "Sala 10",
   ]
 
   useEffect(() => {
-    setCarrinho(JSON.parse(localStorage.getItem("carrinho") || "{}"))
-    setDados(JSON.parse(localStorage.getItem("carrinhoDados") || "{}"))
-    setWhats(localStorage.getItem("carrinhoWhats") || "")
+    const carrinhoSalvo = JSON.parse(localStorage.getItem("carrinho") || "{}")
+    const dadosSalvos = JSON.parse(localStorage.getItem("carrinhoDados") || "{}")
+    const whatsSalvo = localStorage.getItem("carrinhoWhats") || ""
+
+    setCarrinho(carrinhoSalvo)
+    setDados(dadosSalvos)
+    setWhats(whatsSalvo)
   }, [])
 
   useEffect(() => {
@@ -34,116 +66,158 @@ export default function Cart() {
     localStorage.setItem("carrinhoWhats", whats)
   }, [whats])
 
-  function alterar(id: number, tipo: string) {
-    const novo = { ...carrinho }
+  const itensNoCarrinho = useMemo(() => {
+    return produtos.filter((produto) => (carrinho[produto.id] || 0) > 0)
+  }, [carrinho])
 
-    if (tipo === "mais") {
-      novo[id] = (novo[id] || 0) + 1
-    }
+  const totalItens = useMemo(() => {
+    return Object.values(carrinho).reduce((acc, qtd) => acc + qtd, 0)
+  }, [carrinho])
 
-    if (tipo === "menos") {
-      novo[id] = (novo[id] || 0) - 1
-      if (novo[id] <= 0) delete novo[id]
-    }
+  const totalPreco = useMemo(() => {
+    return itensNoCarrinho.reduce((acc, produto) => {
+      return acc + produto.preco * (carrinho[produto.id] || 0)
+    }, 0)
+  }, [itensNoCarrinho, carrinho])
 
-    setCarrinho(novo)
+  function formatarWhats(v: string) {
+    const n = v.replace(/\D/g, "").slice(0, 11)
+
+    if (n.length <= 2) return n
+    if (n.length <= 7) return `(${n.slice(0, 2)}) ${n.slice(2)}`
+    return `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`
   }
 
-  function atualizarCampo(produtoId: number, index: number, campo: string, valor: any) {
-    setDados((prev: any) => {
-      const copia = { ...prev }
+  function alterarQuantidade(id: number, delta: number) {
+    setCarrinho((prev) => {
+      const atual = prev[id] || 0
+      const novaQtd = atual + delta
+      const novoCarrinho = { ...prev }
 
-      if (!copia[produtoId]) copia[produtoId] = []
-
-      if (!copia[produtoId][index]) {
-        copia[produtoId][index] = {
-          mensagem: "",
-          nome: "",
-          sala: "",
-          remetente: "",
-          anonimo: false,
-        }
+      if (novaQtd <= 0) {
+        delete novoCarrinho[id]
+      } else {
+        novoCarrinho[id] = novaQtd
       }
 
-      copia[produtoId][index][campo] = valor
+      return novoCarrinho
+    })
+
+    setDados((prev) => {
+      const qtdAtual = carrinho[id] || 0
+      const novaQtd = qtdAtual + delta
+      const listaAtual = prev[id] || []
+      const novo = { ...prev }
+
+      if (novaQtd <= 0) {
+        delete novo[id]
+        return novo
+      }
+
+      if (delta > 0) {
+        const novosItens = [...listaAtual]
+        while (novosItens.length < novaQtd) {
+          novosItens.push({
+            mensagem: "",
+            remetente: "",
+            nome: "",
+            sala: "",
+          })
+        }
+        novo[id] = novosItens
+      } else {
+        novo[id] = listaAtual.slice(0, novaQtd)
+      }
+
+      return novo
+    })
+  }
+
+  function atualizarCampo(
+    produtoId: number,
+    index: number,
+    campo: keyof DadosItem,
+    valor: string
+  ) {
+    setDados((prev) => {
+      const copia = { ...prev }
+      const lista = [...(copia[produtoId] || [])]
+
+      while (lista.length <= index) {
+        lista.push({
+          mensagem: "",
+          remetente: "",
+          nome: "",
+          sala: "",
+        })
+      }
+
+      lista[index] = {
+        ...lista[index],
+        [campo]: valor,
+      }
+
+      copia[produtoId] = lista
       return copia
     })
   }
 
-  function formatarWhats(valor: string) {
-    const n = valor.replace(/\D/g, "")
-    if (n.length <= 2) return n
-    if (n.length <= 7) return `(${n.slice(0, 2)}) ${n.slice(2)}`
-    return `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7, 11)}`
+  function limparCarrinhoCompleto() {
+    setCarrinho({})
+    setDados({})
+    setWhats("")
+    localStorage.removeItem("carrinho")
+    localStorage.removeItem("carrinhoDados")
+    localStorage.removeItem("carrinhoWhats")
   }
 
   async function finalizarPedido() {
-    const numeroLimpo = whats.replace(/\D/g, "")
-
-    if (!numeroLimpo) {
-      alert("Digite seu WhatsApp")
-      return
-    }
-
-    if (!/^\d{10,11}$/.test(numeroLimpo)) {
-      alert("Digite o WhatsApp com DDD. Ex: 31999999999")
-      return
-    }
-
-    const pedido: any[] = []
-
-    for (const produtoId of Object.keys(carrinho)) {
-      const quantidade = carrinho[produtoId]
-
-      for (let i = 0; i < quantidade; i++) {
-        const item = dados?.[produtoId]?.[i]
-
-        if (!item?.mensagem?.trim()) {
-          alert(`Digite a mensagem do item ${i + 1} do produto ${produtoId}`)
-          return
-        }
-
-        if (!item?.nome?.trim()) {
-          alert(`Preencha o nome de quem recebe no item ${i + 1} do produto ${produtoId}`)
-          return
-        }
-
-        if (!item?.sala?.trim()) {
-          alert(`Selecione a sala no item ${i + 1} do produto ${produtoId}`)
-          return
-        }
-
-        pedido.push({
-          produto: produtoId,
-          mensagem: item.mensagem.trim(),
-          remetente: item.anonimo ? "Anônimo" : (item.remetente || "").trim(),
-          destinatario: item.nome.trim(),
-          sala: item.sala.trim(),
-          whatsapp: numeroLimpo,
-        })
-      }
-    }
-
-    if (pedido.length === 0) {
-      alert("Seu carrinho está vazio")
-      return
-    }
-
-    const itensPagamento = Object.keys(carrinho).map((produtoId) => {
-      const produto = produtos.find((p) => p.id === Number(produtoId))
-
-      return {
-        id: produtoId,
-        title: produto?.nome || `Produto ${produtoId}`,
-        quantity: Number(carrinho[produtoId]),
-        unit_price: Number(produto?.preco || 0),
-      }
-    })
-
     try {
+      const numeroLimpo = whats.replace(/\D/g, "")
+
+      if (!numeroLimpo || numeroLimpo.length < 10) {
+        alert("Digite um WhatsApp válido")
+        return
+      }
+
+      if (itensNoCarrinho.length === 0) {
+        alert("Seu carrinho está vazio")
+        return
+      }
+
+      const pedido: any[] = []
+
+      for (const produto of itensNoCarrinho) {
+        const quantidade = carrinho[produto.id] || 0
+        const listaDados = dados[produto.id] || []
+
+        for (let i = 0; i < quantidade; i++) {
+          const item = listaDados[i]
+
+          if (!item?.nome?.trim()) {
+            alert(`Preencha o destinatário do item ${i + 1} de ${produto.nome}`)
+            return
+          }
+
+          if (!item?.sala?.trim()) {
+            alert(`Selecione a sala do item ${i + 1} de ${produto.nome}`)
+            return
+          }
+
+          pedido.push({
+            produto: produto.nome,
+            mensagem: item.mensagem?.trim() || "",
+            remetente: item.remetente?.trim() || "",
+            destinatario: item.nome.trim(),
+            sala: item.sala.trim(),
+            whatsapp: numeroLimpo,
+          })
+        }
+      }
+
       setCarregando(true)
 
-      const responsePedido = await fetch("/api/pedido", {
+      const resPedido = await fetch("/api/pedido", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -151,195 +225,319 @@ export default function Cart() {
         body: JSON.stringify(pedido),
       })
 
-      const resultadoPedido = await responsePedido.json()
+      const textoPedido = await resPedido.text()
+      console.log("Status /api/pedido:", resPedido.status)
+      console.log("Resposta /api/pedido:", textoPedido)
 
-      if (!responsePedido.ok) {
-        alert("Erro HTTP em /api/pedido: " + JSON.stringify(resultadoPedido))
-        setCarregando(false)
+      if (!resPedido.ok) {
+        alert("Erro ao criar pedido")
         return
       }
 
-      if (!resultadoPedido.ok) {
-        alert("Erro ao registrar pedido: " + JSON.stringify(resultadoPedido))
-        setCarregando(false)
+      let pedidoData: any
+
+      try {
+        pedidoData = JSON.parse(textoPedido)
+      } catch {
+        console.error("Resposta inválida da API /api/pedido:", textoPedido)
+        alert("A API de pedido não retornou JSON válido")
         return
       }
 
-      if (!resultadoPedido.numeroPedido) {
-        alert("Pedido sem número retornado: " + JSON.stringify(resultadoPedido))
-        setCarregando(false)
-        return
-      }
-
-      const responsePagamento = await fetch("/api/pedido/pagamento", {
+      const pagamento = await fetch("/api/pedido/pagamento", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          itens: itensPagamento,
-          numeroPedido: resultadoPedido.numeroPedido,
+          itens: [
+            {
+              id: "1",
+              title: "Pedido Correio Elegante",
+              quantity: 1,
+              unit_price: totalPreco,
+            },
+          ],
+          numeroPedido: pedidoData.numeroPedido,
         }),
       })
 
-      const resultadoPagamento = await responsePagamento.json()
+      const textoPagamento = await pagamento.text()
+      console.log("Status /api/pedido/pagamento:", pagamento.status)
+      console.log("Resposta /api/pedido/pagamento:", textoPagamento)
 
-      if (!responsePagamento.ok) {
-        alert("Erro HTTP em /api/pedido/pagamento: " + JSON.stringify(resultadoPagamento))
-        setCarregando(false)
+      if (!pagamento.ok) {
+        alert("Erro ao gerar pagamento")
         return
       }
 
-      if (!resultadoPagamento.ok) {
-        alert("Erro ao gerar pagamento: " + JSON.stringify(resultadoPagamento))
-        setCarregando(false)
+      let pag: any
+
+      try {
+        pag = JSON.parse(textoPagamento)
+      } catch {
+        console.error("Resposta inválida da API /api/pedido/pagamento:", textoPagamento)
+        alert("A API de pagamento não retornou JSON válido")
         return
       }
 
-      const linkPagamento =
-        resultadoPagamento.init_point || resultadoPagamento.sandbox_init_point
-
-      if (!linkPagamento) {
-        alert("Link de pagamento não retornado: " + JSON.stringify(resultadoPagamento))
-        setCarregando(false)
+      if (!pag.init_point) {
+        console.error("init_point não encontrado:", pag)
+        alert("O link de pagamento não foi retornado")
         return
       }
 
-      localStorage.removeItem("carrinho")
-      localStorage.removeItem("carrinhoDados")
-      localStorage.removeItem("carrinhoWhats")
-
-      window.location.href = linkPagamento
-    } catch (err: any) {
-      alert("Erro no catch: " + (err?.message || String(err)))
+      window.location.href = pag.init_point
+    } catch (error) {
+      console.error("Erro no catch:", error)
+      alert("Erro inesperado ao finalizar pedido")
+    } finally {
       setCarregando(false)
     }
   }
 
-  const itens = produtos.filter((p) => carrinho[p.id])
-  const total = itens.reduce((acc, p) => acc + p.preco * carrinho[p.id], 0)
-
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
-      <h1 className="text-xl font-bold mb-4">🛒 Seu Carrinho</h1>
+    <main className="min-h-screen bg-pink-50 p-4 md:p-8">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <h1 className="text-2xl font-bold text-pink-700">Carrinho</h1>
 
-      {itens.map((p) => (
-        <div key={p.id} className="bg-white p-4 mb-4 rounded-xl shadow">
-          <h2 className="font-semibold text-lg text-black">{p.nome}</h2>
-          <p className="text-pink-600 font-bold">R$ {p.preco}</p>
-
-          <div className="flex items-center gap-2 mt-2">
-            <button
-              onClick={() => alterar(p.id, "menos")}
-              className="bg-gray-300 px-3 py-1 rounded text-black"
-            >
-              -
-            </button>
-
-            <span className="text-black">{carrinho[p.id]}</span>
-
-            <button
-              onClick={() => alterar(p.id, "mais")}
-              className="bg-gray-300 px-3 py-1 rounded text-black"
-            >
-              +
-            </button>
-          </div>
-
-          <div className="mt-4 space-y-4">
-            {Array.from({ length: carrinho[p.id] }).map((_, i) => (
-              <div key={i} className="bg-white border border-gray-200 p-3 rounded-lg">
-                <p className="text-sm font-semibold mb-2 text-black">
-                  Mensagem {i + 1}
-                </p>
-
-                <textarea
-                  placeholder="Mensagem *"
-                  className="w-full border border-gray-300 rounded p-2 text-sm text-black bg-white"
-                  value={dados?.[p.id]?.[i]?.mensagem || ""}
-                  onChange={(e) => atualizarCampo(p.id, i, "mensagem", e.target.value)}
-                />
-
-                <input
-                  placeholder="Nome de quem recebe *"
-                  className="w-full border border-gray-300 rounded p-2 mt-2 text-sm text-black bg-white"
-                  value={dados?.[p.id]?.[i]?.nome || ""}
-                  onChange={(e) => atualizarCampo(p.id, i, "nome", e.target.value)}
-                />
-
-                <select
-                  className="w-full border border-gray-300 rounded p-2 mt-2 text-sm text-black bg-white"
-                  value={dados?.[p.id]?.[i]?.sala || ""}
-                  onChange={(e) => atualizarCampo(p.id, i, "sala", e.target.value)}
-                >
-                  <option value="">Selecione a sala *</option>
-
-                  <option>Professor(a)</option>
-
-                  <option>1º Eletrônica</option>
-                  <option>1º Ene. Renovável</option>
-                  <option>1º Fab. Mecânica</option>
-                  <option>1º Informática</option>
-                  <option>1º Logística</option>
-                  <option>1º Seg. Trabalho</option>
-
-                  <option>2º Eletrônica</option>
-                  <option>2º Ene. Renovável</option>
-                  <option>2º Fab. Mecânica</option>
-                  <option>2º Informática</option>
-                  <option>2º Logística</option>
-                  <option>2º Seg. Trabalho</option>
-
-                  <option>3º Eletrônica</option>
-                  <option>3º Informática</option>
-                  <option>3º Logística</option>
-                  <option>3º Propedêutico</option>
-                  <option>3º Seg. Trabalho</option>
-                </select>
-
-                {!dados?.[p.id]?.[i]?.anonimo && (
-                  <input
-                    placeholder="Seu nome (opcional)"
-                    className="w-full border border-gray-300 rounded p-2 mt-2 text-sm text-black bg-white"
-                    value={dados?.[p.id]?.[i]?.remetente || ""}
-                    onChange={(e) => atualizarCampo(p.id, i, "remetente", e.target.value)}
-                  />
-                )}
-
-                <label className="flex items-center gap-2 mt-2 text-sm text-black">
-                  <input
-                    type="checkbox"
-                    className="w-4 h-4 accent-pink-500"
-                    checked={dados?.[p.id]?.[i]?.anonimo || false}
-                    onChange={(e) => atualizarCampo(p.id, i, "anonimo", e.target.checked)}
-                  />
-                  Enviar anonimamente
-                </label>
-              </div>
-            ))}
-          </div>
+          <Link
+            href="/"
+            className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-pink-700 shadow"
+          >
+            Voltar para a loja
+          </Link>
         </div>
-      ))}
 
-      <input
-        placeholder="Seu WhatsApp (ex: (31) 99999-9999)"
-        className="w-full border border-gray-300 rounded p-2 mt-3 text-black bg-white"
-        value={formatarWhats(whats)}
-        inputMode="numeric"
-        onChange={(e) => setWhats(e.target.value.replace(/\D/g, "").slice(0, 11))}
-      />
+        {itensNoCarrinho.length === 0 ? (
+          <div className="rounded-2xl bg-white p-8 text-center shadow">
+            <p className="text-lg font-medium text-gray-700">
+              Seu carrinho está vazio.
+            </p>
 
-      <div className="bg-white p-4 rounded-xl shadow mt-4">
-        <h2 className="font-bold text-lg text-black">Total: R$ {total}</h2>
+            <Link
+              href="/"
+              className="mt-4 inline-block rounded-xl bg-pink-600 px-5 py-3 font-semibold text-white"
+            >
+              Escolher produtos
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {itensNoCarrinho.map((produto) => {
+              const quantidade = carrinho[produto.id] || 0
 
-        <button
-          onClick={finalizarPedido}
-          disabled={carregando}
-          className="mt-3 w-full bg-green-500 text-white py-2 rounded-lg disabled:opacity-60"
-        >
-          {carregando ? "Gerando pagamento..." : "Confirmar Pedido e Ir para Pagamento"}
-        </button>
+              return (
+                <section
+                  key={produto.id}
+                  className="rounded-2xl bg-white p-5 shadow"
+                >
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-4">
+                      {produto.imagem ? (
+                        <img
+                          src={produto.imagem}
+                          alt={produto.nome}
+                          className="h-20 w-20 rounded-xl object-cover"
+                        />
+                      ) : null}
+
+                      <div>
+                        <h2 className="text-lg font-bold text-gray-800">
+                          {produto.nome}
+                        </h2>
+                        <p className="text-sm text-gray-600">
+                          R$ {produto.preco.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => alterarQuantidade(produto.id, -1)}
+                        className="h-10 w-10 rounded-full bg-pink-100 text-xl font-bold text-pink-700"
+                      >
+                        -
+                      </button>
+
+                      <span className="min-w-[24px] text-center text-lg font-semibold">
+                        {quantidade}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => alterarQuantidade(produto.id, 1)}
+                        className="h-10 w-10 rounded-full bg-pink-600 text-xl font-bold text-white"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 space-y-6">
+                    {Array.from({ length: quantidade }).map((_, index) => {
+                      const item = dados[produto.id]?.[index] || {
+                        mensagem: "",
+                        remetente: "",
+                        nome: "",
+                        sala: "",
+                      }
+
+                      return (
+                        <div
+                          key={`${produto.id}-${index}`}
+                          className="rounded-2xl border border-pink-100 bg-pink-50 p-4"
+                        >
+                          <h3 className="mb-4 text-sm font-bold text-pink-700">
+                            {produto.nome} #{index + 1}
+                          </h3>
+
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div className="md:col-span-2">
+                              <label className="mb-1 block text-sm font-medium text-gray-700">
+                                Mensagem
+                              </label>
+                              <textarea
+                                value={item.mensagem}
+                                onChange={(e) =>
+                                  atualizarCampo(
+                                    produto.id,
+                                    index,
+                                    "mensagem",
+                                    e.target.value
+                                  )
+                                }
+                                className="min-h-[100px] w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                placeholder="Digite a mensagem"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-sm font-medium text-gray-700">
+                                Remetente
+                              </label>
+                              <input
+                                type="text"
+                                value={item.remetente}
+                                onChange={(e) =>
+                                  atualizarCampo(
+                                    produto.id,
+                                    index,
+                                    "remetente",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                placeholder="Seu nome ou Anônimo"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-sm font-medium text-gray-700">
+                                Destinatário *
+                              </label>
+                              <input
+                                type="text"
+                                value={item.nome}
+                                onChange={(e) =>
+                                  atualizarCampo(
+                                    produto.id,
+                                    index,
+                                    "nome",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                placeholder="Nome de quem vai receber"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-1 block text-sm font-medium text-gray-700">
+                                Sala *
+                              </label>
+                              <select
+                                value={item.sala}
+                                onChange={(e) =>
+                                  atualizarCampo(
+                                    produto.id,
+                                    index,
+                                    "sala",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                              >
+                                <option value="">Selecione a sala</option>
+                                {salas.map((sala) => (
+                                  <option key={sala} value={sala}>
+                                    {sala}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+              )
+            })}
+
+            <section className="rounded-2xl bg-white p-5 shadow">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    WhatsApp *
+                  </label>
+                  <input
+                    type="text"
+                    value={formatarWhats(whats)}
+                    onChange={(e) =>
+                      setWhats(e.target.value.replace(/\D/g, "").slice(0, 11))
+                    }
+                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                    placeholder="(31) 99999-9999"
+                  />
+                </div>
+
+                <div className="flex flex-col justify-end">
+                  <div className="rounded-xl bg-pink-50 p-4">
+                    <p className="text-sm text-gray-700">
+                      Itens: <strong>{totalItens}</strong>
+                    </p>
+                    <p className="text-lg font-bold text-pink-700">
+                      Total: R$ {totalPreco.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-col gap-3 md:flex-row">
+                <button
+                  type="button"
+                  onClick={limparCarrinhoCompleto}
+                  className="rounded-xl bg-gray-200 px-5 py-3 font-semibold text-gray-800"
+                >
+                  Limpar carrinho
+                </button>
+
+                <button
+                  type="button"
+                  onClick={finalizarPedido}
+                  disabled={carregando}
+                  className="rounded-xl bg-pink-600 px-5 py-3 font-semibold text-white disabled:opacity-60"
+                >
+                  {carregando ? "Processando..." : "Confirmar e pagar"}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
       </div>
-    </div>
+    </main>
   )
 }
