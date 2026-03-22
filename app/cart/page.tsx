@@ -32,16 +32,27 @@ export default function CartPage() {
   ]
 
   const salas = [
-    "Sala 1",
-    "Sala 2",
-    "Sala 3",
-    "Sala 4",
-    "Sala 5",
-    "Sala 6",
-    "Sala 7",
-    "Sala 8",
-    "Sala 9",
-    "Sala 10",
+    "Professor(a)",
+
+    "1 Eletrônica",
+    "1 Ene. Renovável",
+    "1 Fab. Mecânica",
+    "1 Informática",
+    "1 Logística",
+    "1 Seg. Trabalho",
+
+    "2 Eletrônica",
+    "2 Ene. Renovável",
+    "2 Fab. Mecânica",
+    "2 Informática",
+    "2 Logística",
+    "2 Seg. Trabalho",
+
+    "3 Eletrônica",
+    "3 Informática",
+    "3 Logística",
+    "3 Propedêutico",
+    "3 Seg. Trabalho",
   ]
 
   useEffect(() => {

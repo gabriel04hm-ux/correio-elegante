@@ -38,6 +38,14 @@ export async function POST(req: Request) {
       body: {
         items: itens,
         external_reference: String(numeroPedido || ""),
+        payment_methods: {
+          excluded_payment_types: [
+            { id: "credit_card" },
+            { id: "debit_card" },
+            { id: "ticket" },
+          ],
+          installments: 1,
+        },
         back_urls: {
           success: `${siteUrl}/checkout?status=success`,
           failure: `${siteUrl}/checkout?status=failure`,
