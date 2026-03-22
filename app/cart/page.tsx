@@ -15,6 +15,7 @@ type DadosItem = {
   remetente: string
   nome: string
   sala: string
+  anonimo: boolean
 }
 
 export default function CartPage() {
@@ -24,7 +25,7 @@ export default function CartPage() {
   const [carregando, setCarregando] = useState(false)
 
   const produtos: Produto[] = [
-    { id: 1, nome: "Produto 1", preco: 5, imagem: "/p1.jpg" },
+    { id: 1, nome: "Produto 1", preco: 1, imagem: "/p1.jpg" },
     { id: 2, nome: "Produto 2", preco: 6, imagem: "/p2.jpg" },
     { id: 3, nome: "Produto 3", preco: 7, imagem: "/p3.jpg" },
     { id: 4, nome: "Produto 4", preco: 8, imagem: "/p4.jpg" },
@@ -133,6 +134,7 @@ export default function CartPage() {
             remetente: "",
             nome: "",
             sala: "",
+            anonimo: false,
           })
         }
         novo[id] = novosItens
@@ -148,7 +150,7 @@ export default function CartPage() {
     produtoId: number,
     index: number,
     campo: keyof DadosItem,
-    valor: string
+    valor: string | boolean
   ) {
     setDados((prev) => {
       const copia = { ...prev }
@@ -160,6 +162,7 @@ export default function CartPage() {
           remetente: "",
           nome: "",
           sala: "",
+          anonimo: false,
         })
       }
 
@@ -218,7 +221,7 @@ export default function CartPage() {
           pedido.push({
             produto: produto.nome,
             mensagem: item.mensagem?.trim() || "",
-            remetente: item.remetente?.trim() || "",
+            remetente: item.anonimo ? "Anônimo" : item.remetente?.trim() || "",
             destinatario: item.nome.trim(),
             sala: item.sala.trim(),
             whatsapp: numeroLimpo,
@@ -227,33 +230,6 @@ export default function CartPage() {
       }
 
       setCarregando(true)
-
-      const resPedido = await fetch("/api/pedido", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(pedido),
-      })
-
-      const textoPedido = await resPedido.text()
-      console.log("Status /api/pedido:", resPedido.status)
-      console.log("Resposta /api/pedido:", textoPedido)
-
-      if (!resPedido.ok) {
-        alert("Erro ao criar pedido")
-        return
-      }
-
-      let pedidoData: any
-
-      try {
-        pedidoData = JSON.parse(textoPedido)
-      } catch {
-        console.error("Resposta inválida da API /api/pedido:", textoPedido)
-        alert("A API de pedido não retornou JSON válido")
-        return
-      }
 
       const pagamento = await fetch("/api/pedido/pagamento", {
         method: "POST",
@@ -269,7 +245,7 @@ export default function CartPage() {
               unit_price: totalPreco,
             },
           ],
-          numeroPedido: pedidoData.numeroPedido,
+          pedido,
         }),
       })
 
@@ -278,7 +254,8 @@ export default function CartPage() {
       console.log("Resposta /api/pedido/pagamento:", textoPagamento)
 
       if (!pagamento.ok) {
-        alert("Erro ao gerar pagamento")
+        console.error("Erro ao gerar pagamento:", textoPagamento)
+        alert(`Erro ao gerar pagamento: ${textoPagamento}`)
         return
       }
 
@@ -394,6 +371,7 @@ export default function CartPage() {
                         remetente: "",
                         nome: "",
                         sala: "",
+                        anonimo: false,
                       }
 
                       return (
@@ -425,25 +403,45 @@ export default function CartPage() {
                               />
                             </div>
 
-                            <div>
-                              <label className="mb-1 block text-sm font-medium text-gray-700">
-                                Remetente
+                            <div className="md:col-span-2">
+                              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                <input
+                                  type="checkbox"
+                                  checked={item.anonimo || false}
+                                  onChange={(e) =>
+                                    atualizarCampo(
+                                      produto.id,
+                                      index,
+                                      "anonimo",
+                                      e.target.checked
+                                    )
+                                  }
+                                />
+                                Enviar anonimamente
                               </label>
-                              <input
-                                type="text"
-                                value={item.remetente}
-                                onChange={(e) =>
-                                  atualizarCampo(
-                                    produto.id,
-                                    index,
-                                    "remetente",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
-                                placeholder="Seu nome ou Anônimo"
-                              />
                             </div>
+
+                            {!item.anonimo && (
+                              <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                  Remetente
+                                </label>
+                                <input
+                                  type="text"
+                                  value={item.remetente}
+                                  onChange={(e) =>
+                                    atualizarCampo(
+                                      produto.id,
+                                      index,
+                                      "remetente",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                  placeholder="Seu nome"
+                                />
+                              </div>
+                            )}
 
                             <div>
                               <label className="mb-1 block text-sm font-medium text-gray-700">
