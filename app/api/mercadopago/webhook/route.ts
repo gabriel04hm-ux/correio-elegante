@@ -4,118 +4,51 @@ import { MercadoPagoConfig, Payment } from "mercadopago"
 const SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycbyPWSvP56h4zq8V_UXXOx8sP5bFFbQajksq0NyAVFkA-HWuZMm8sH_iLFpo4-tVmT577A/exec"
 
-async function enviarParaPlanilha(paymentInfo: any) {
-  const pedido = paymentInfo?.metadata?.pedido
-
-  if (!pedido || !Array.isArray(pedido) || pedido.length === 0) {
-    throw new Error("Pedido não encontrado no metadata")
-  }
-
-  const resposta = await fetch(SCRIPT_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      paymentId: String(paymentInfo.id),
-      pedido,
-    }),
-  })
-
-  const texto = await resposta.text()
-  console.log("Resposta Apps Script:", texto)
-
-  if (!resposta.ok) {
-    throw new Error(`Erro ao enviar para planilha: ${texto}`)
-  }
-
-  return texto
-}
-
 export async function POST(req: Request) {
   try {
-    let body: any = null
+    const body = await req.json()
 
-    try {
-      body = await req.json()
-    } catch {
-      body = null
-    }
-
-    const url = new URL(req.url)
-
-    const idFromBody =
-      body?.data?.id ||
-      body?.id ||
-      null
-
-    const topicFromBody =
-      body?.type ||
-      body?.topic ||
-      body?.action ||
-      null
-
-    const idFromQuery =
-      url.searchParams.get("data.id") ||
-      url.searchParams.get("id") ||
-      null
-
-    const topicFromQuery =
-      url.searchParams.get("type") ||
-      url.searchParams.get("topic") ||
-      null
-
-    const paymentId = String(idFromBody || idFromQuery || "")
-    const topic = String(topicFromBody || topicFromQuery || "")
-
-    console.log("Webhook recebido:", { body, paymentId, topic })
+    const paymentId = body?.data?.id
 
     if (!paymentId) {
-      return NextResponse.json({ ok: true, ignored: true, motivo: "Sem paymentId" })
-    }
-
-    const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
-
-    if (!token) {
-      return NextResponse.json(
-        { ok: false, error: "Token do Mercado Pago não encontrado" },
-        { status: 500 }
-      )
+      return NextResponse.json({ ok: false })
     }
 
     const client = new MercadoPagoConfig({
-      accessToken: token,
+      accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
     })
 
     const payment = new Payment(client)
     const paymentInfo: any = await payment.get({ id: paymentId })
 
-    console.log("Pagamento consultado no webhook:", JSON.stringify(paymentInfo))
-
-    if (!paymentInfo || paymentInfo.status !== "approved") {
-      return NextResponse.json({
-        ok: true,
-        ignored: true,
-        status: paymentInfo?.status || "unknown",
-      })
+    if (paymentInfo.status !== "approved") {
+      return NextResponse.json({ ok: true })
     }
 
-    await enviarParaPlanilha(paymentInfo)
+    // 🔥 CORREÇÃO AQUI
+    const pedidoRaw = paymentInfo.metadata?.pedido
 
-    return NextResponse.json({
-      ok: true,
-      enviadoParaPlanilha: true,
-      status: paymentInfo.status,
-    })
-  } catch (error: any) {
-    console.error("Erro no webhook do Mercado Pago:", error)
+    if (!pedidoRaw) {
+      console.log("Sem pedido no metadata")
+      return NextResponse.json({ ok: false })
+    }
 
-    return NextResponse.json(
-      {
-        ok: false,
-        error: error?.message || "Erro interno no webhook",
+    const pedido = JSON.parse(pedidoRaw)
+
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-      { status: 500 }
-    )
+      body: JSON.stringify({
+        paymentId: String(paymentId),
+        pedido,
+      }),
+    })
+
+    return NextResponse.json({ ok: true })
+  } catch (error: any) {
+    console.error("Erro webhook:", error)
+    return NextResponse.json({ ok: false })
   }
 }
