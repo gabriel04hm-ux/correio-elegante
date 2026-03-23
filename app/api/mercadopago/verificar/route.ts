@@ -23,7 +23,7 @@ async function enviarParaPlanilha(paymentInfo: any) {
   })
 
   const texto = await resposta.text()
-  console.log("Resposta Apps Script:", texto)
+  console.log("Resposta Apps Script na verificação:", texto)
 
   if (!resposta.ok) {
     throw new Error(`Erro ao enviar para planilha: ${texto}`)
@@ -34,44 +34,14 @@ async function enviarParaPlanilha(paymentInfo: any) {
 
 export async function POST(req: Request) {
   try {
-    let body: any = null
-
-    try {
-      body = await req.json()
-    } catch {
-      body = null
-    }
-
-    const url = new URL(req.url)
-
-    const idFromBody =
-      body?.data?.id ||
-      body?.id ||
-      null
-
-    const topicFromBody =
-      body?.type ||
-      body?.topic ||
-      body?.action ||
-      null
-
-    const idFromQuery =
-      url.searchParams.get("data.id") ||
-      url.searchParams.get("id") ||
-      null
-
-    const topicFromQuery =
-      url.searchParams.get("type") ||
-      url.searchParams.get("topic") ||
-      null
-
-    const paymentId = String(idFromBody || idFromQuery || "")
-    const topic = String(topicFromBody || topicFromQuery || "")
-
-    console.log("Webhook recebido:", { body, paymentId, topic })
+    const body = await req.json()
+    const paymentId = String(body?.paymentId || "")
 
     if (!paymentId) {
-      return NextResponse.json({ ok: true, ignored: true, motivo: "Sem paymentId" })
+      return NextResponse.json(
+        { ok: false, error: "paymentId não informado" },
+        { status: 400 }
+      )
     }
 
     const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
@@ -90,30 +60,31 @@ export async function POST(req: Request) {
     const payment = new Payment(client)
     const paymentInfo: any = await payment.get({ id: paymentId })
 
-    console.log("Pagamento consultado no webhook:", JSON.stringify(paymentInfo))
+    console.log("Pagamento consultado na verificação:", JSON.stringify(paymentInfo))
 
-    if (!paymentInfo || paymentInfo.status !== "approved") {
-      return NextResponse.json({
-        ok: true,
-        ignored: true,
-        status: paymentInfo?.status || "unknown",
-      })
+    if (!paymentInfo) {
+      return NextResponse.json(
+        { ok: false, error: "Pagamento não encontrado" },
+        { status: 404 }
+      )
     }
 
-    await enviarParaPlanilha(paymentInfo)
+    if (paymentInfo.status === "approved") {
+      await enviarParaPlanilha(paymentInfo)
+    }
 
     return NextResponse.json({
       ok: true,
-      enviadoParaPlanilha: true,
       status: paymentInfo.status,
+      paymentId: String(paymentInfo.id),
     })
   } catch (error: any) {
-    console.error("Erro no webhook do Mercado Pago:", error)
+    console.error("Erro em /api/mercadopago/verificar:", error)
 
     return NextResponse.json(
       {
         ok: false,
-        error: error?.message || "Erro interno no webhook",
+        error: error?.message || "Erro interno ao verificar pagamento",
       },
       { status: 500 }
     )

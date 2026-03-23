@@ -6,47 +6,33 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { itens, pedido } = body
 
-    console.log("Body recebido em /api/pedido/pagamento:", JSON.stringify(body))
-
     const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
 
     if (!token) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: "Token do Mercado Pago não encontrado no ambiente",
-        },
+        { ok: false, error: "Token do Mercado Pago não encontrado no ambiente" },
         { status: 500 }
       )
     }
 
     if (!siteUrl) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: "NEXT_PUBLIC_SITE_URL não encontrada no ambiente",
-        },
+        { ok: false, error: "NEXT_PUBLIC_SITE_URL não encontrada no ambiente" },
         { status: 500 }
       )
     }
 
     if (!itens || !Array.isArray(itens) || itens.length === 0) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: "Itens inválidos para pagamento",
-        },
+        { ok: false, error: "Itens inválidos para pagamento" },
         { status: 400 }
       )
     }
 
     if (!pedido || !Array.isArray(pedido) || pedido.length === 0) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: "Pedido inválido",
-        },
+        { ok: false, error: "Pedido inválido" },
         { status: 400 }
       )
     }
@@ -85,9 +71,12 @@ export async function POST(req: Request) {
 
     const preference = new Preference(client)
 
+    const externalReference = `pedido-${Date.now()}`
+
     const res = await preference.create({
       body: {
         items: itensFormatados,
+        external_reference: externalReference,
         metadata: {
           pedido,
         },
@@ -126,6 +115,7 @@ export async function POST(req: Request) {
       ok: true,
       init_point: linkPagamento,
       preference_id: res.id,
+      external_reference: externalReference,
     })
   } catch (error: any) {
     console.error("Erro detalhado em /api/pedido/pagamento:", error)
