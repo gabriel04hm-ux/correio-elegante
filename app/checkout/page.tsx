@@ -1,12 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 
 type Estado = "carregando" | "aprovado" | "pendente" | "falhou" | "erro"
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const searchParams = useSearchParams()
   const [estado, setEstado] = useState<Estado>("carregando")
   const [mensagem, setMensagem] = useState("Verificando pagamento...")
@@ -88,45 +88,64 @@ export default function CheckoutPage() {
   }, [searchParams])
 
   return (
-    <main className="min-h-screen bg-pink-50 p-4 md:p-8">
-      <div className="mx-auto max-w-2xl rounded-2xl bg-white p-8 shadow">
-        <h1 className="text-2xl font-bold text-pink-700">Status do pagamento</h1>
+    <div className="mx-auto max-w-2xl rounded-2xl bg-white p-8 shadow">
+      <h1 className="text-2xl font-bold text-pink-700">Status do pagamento</h1>
 
-        <p className="mt-4 text-lg text-gray-700">{mensagem}</p>
+      <p className="mt-4 text-lg text-gray-700">{mensagem}</p>
 
-        {estado === "aprovado" && (
-          <p className="mt-3 font-semibold text-green-600">
-            Seu pedido foi confirmado e enviado com sucesso.
-          </p>
-        )}
+      {estado === "aprovado" && (
+        <p className="mt-3 font-semibold text-green-600">
+          Seu pedido foi confirmado e enviado com sucesso.
+        </p>
+      )}
 
-        {estado === "pendente" && (
-          <p className="mt-3 font-semibold text-yellow-600">
-            Assim que o pagamento for confirmado, seu pedido será processado.
-          </p>
-        )}
+      {estado === "pendente" && (
+        <p className="mt-3 font-semibold text-yellow-600">
+          Assim que o pagamento for confirmado, seu pedido será processado.
+        </p>
+      )}
 
-        {estado === "falhou" && (
-          <p className="mt-3 font-semibold text-red-600">
-            O pagamento não foi concluído.
-          </p>
-        )}
+      {estado === "falhou" && (
+        <p className="mt-3 font-semibold text-red-600">
+          O pagamento não foi concluído.
+        </p>
+      )}
 
-        {estado === "erro" && (
-          <p className="mt-3 font-semibold text-red-600">
-            Tivemos um problema para consultar seu pagamento.
-          </p>
-        )}
+      {estado === "erro" && (
+        <p className="mt-3 font-semibold text-red-600">
+          Tivemos um problema para consultar seu pagamento.
+        </p>
+      )}
 
-        <div className="mt-6">
-          <Link
-            href="/"
-            className="inline-block rounded-xl bg-pink-600 px-5 py-3 font-semibold text-white"
-          >
-            Voltar para a loja
-          </Link>
-        </div>
+      <div className="mt-6">
+        <Link
+          href="/"
+          className="inline-block rounded-xl bg-pink-600 px-5 py-3 font-semibold text-white"
+        >
+          Voltar para a loja
+        </Link>
       </div>
+    </div>
+  )
+}
+
+export default function CheckoutPage() {
+  return (
+    <main className="min-h-screen bg-pink-50 p-4 md:p-8">
+      <Suspense
+        fallback={
+          <div className="mx-auto max-w-2xl rounded-2xl bg-white p-8 shadow">
+            <h1 className="text-2xl font-bold text-pink-700">
+              Status do pagamento
+            </h1>
+            <p className="mt-4 text-lg text-gray-700">
+              Verificando pagamento...
+            </p>
+          </div>
+        }
+      >
+        <CheckoutContent />
+      </Suspense>
     </main>
   )
 }
