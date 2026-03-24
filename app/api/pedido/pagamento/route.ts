@@ -6,18 +6,16 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { itens, pedido } = body
 
-    const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+    if (!itens || itens.length === 0) {
+      return NextResponse.json({ error: "Itens inválidos" }, { status: 400 })
+    }
 
-    if (!token) {
-      return NextResponse.json(
-        { ok: false, error: "Token não encontrado" },
-        { status: 500 }
-      )
+    if (!pedido || pedido.length === 0) {
+      return NextResponse.json({ error: "Pedido vazio" }, { status: 400 })
     }
 
     const client = new MercadoPagoConfig({
-      accessToken: token,
+      accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
     })
 
     const preference = new Preference(client)
@@ -26,24 +24,17 @@ export async function POST(req: Request) {
       body: {
         items: itens,
 
+        // 🔥 ESSENCIAL PRA PLANILHA
         metadata: {
-          pedido,
+          pedido: JSON.stringify(pedido),
         },
 
-        payment_methods: {
-          excluded_payment_types: [
-            { id: "credit_card" },
-            { id: "debit_card" },
-            { id: "ticket" },
-          ],
-        },
-
-        notification_url: `${siteUrl}/api/mercadopago/webhook`,
+        notification_url: `${process.env.NEXT_PUBLIC_SITE_URL}/api/mercadopago/webhook`,
 
         back_urls: {
-          success: `${siteUrl}/checkout?status=success`,
-          failure: `${siteUrl}/checkout?status=failure`,
-          pending: `${siteUrl}/checkout?status=pending`,
+          success: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?status=success`,
+          failure: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?status=failure`,
+          pending: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?status=pending`,
         },
 
         auto_return: "approved",
@@ -51,15 +42,11 @@ export async function POST(req: Request) {
     })
 
     return NextResponse.json({
-      ok: true,
       init_point: res.init_point,
     })
-  } catch (error: any) {
-    console.error(error)
 
-    return NextResponse.json(
-      { ok: false, error: "Erro ao criar pagamento" },
-      { status: 500 }
-    )
+  } catch (error) {
+    console.error("Erro pagamento:", error)
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
 }
