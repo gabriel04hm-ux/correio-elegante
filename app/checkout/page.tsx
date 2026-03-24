@@ -1,151 +1,150 @@
 "use client"
 
-import Link from "next/link"
-import { Suspense, useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useState, useEffect } from "react"
 
-type Estado = "carregando" | "aprovado" | "pendente" | "falhou" | "erro"
+export default function Checkout() {
+  const [carrinho, setCarrinho] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
 
-function CheckoutContent() {
-  const searchParams = useSearchParams()
-  const [estado, setEstado] = useState<Estado>("carregando")
-  const [mensagem, setMensagem] = useState("Verificando pagamento...")
+  const [remetente, setRemetente] = useState("")
+  const [destinatario, setDestinatario] = useState("")
+  const [sala, setSala] = useState("")
+  const [whatsapp, setWhatsapp] = useState("")
+  const [anonimo, setAnonimo] = useState(false)
 
   useEffect(() => {
-    async function verificar() {
-      try {
-        const statusUrl = searchParams.get("status") || ""
-        const paymentId =
-          searchParams.get("payment_id") ||
-          searchParams.get("collection_id") ||
-          ""
+    const dados = JSON.parse(localStorage.getItem("carrinho") || "[]")
+    setCarrinho(dados)
+  }, [])
 
-        console.log("Parâmetros do checkout:", { statusUrl, paymentId })
-
-        if (!paymentId) {
-          if (statusUrl === "success") {
-            setEstado("pendente")
-            setMensagem("Pagamento enviado. Estamos aguardando a confirmação.")
-            return
-          }
-
-          if (statusUrl === "pending") {
-            setEstado("pendente")
-            setMensagem("Pagamento pendente.")
-            return
-          }
-
-          setEstado("falhou")
-          setMensagem("Pagamento não identificado.")
-          return
-        }
-
-        const resposta = await fetch("/api/mercadopago/verificar", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ paymentId }),
-        })
-
-        const texto = await resposta.text()
-        console.log("Resposta da verificação:", texto)
-
-        if (!resposta.ok) {
-          setEstado("erro")
-          setMensagem("Erro ao verificar pagamento.")
-          return
-        }
-
-        const json = JSON.parse(texto)
-        const status = json.status
-
-        if (status === "approved") {
-          setEstado("aprovado")
-          setMensagem("Pagamento aprovado com sucesso.")
-          localStorage.removeItem("carrinho")
-          localStorage.removeItem("carrinhoDados")
-          localStorage.removeItem("carrinhoWhats")
-          return
-        }
-
-        if (status === "pending" || status === "in_process") {
-          setEstado("pendente")
-          setMensagem("Pagamento pendente.")
-          return
-        }
-
-        setEstado("falhou")
-        setMensagem("Pagamento não foi aprovado.")
-      } catch (error) {
-        console.error("Erro ao verificar checkout:", error)
-        setEstado("erro")
-        setMensagem("Erro ao verificar pagamento.")
-      }
-    }
-
-    verificar()
-  }, [searchParams])
-
-  return (
-    <div className="mx-auto max-w-2xl rounded-2xl bg-white p-8 shadow">
-      <h1 className="text-2xl font-bold text-pink-700">Status do pagamento</h1>
-
-      <p className="mt-4 text-lg text-gray-700">{mensagem}</p>
-
-      {estado === "aprovado" && (
-        <p className="mt-3 font-semibold text-green-600">
-          Seu pedido foi confirmado e enviado com sucesso.
-        </p>
-      )}
-
-      {estado === "pendente" && (
-        <p className="mt-3 font-semibold text-yellow-600">
-          Assim que o pagamento for confirmado, seu pedido será processado.
-        </p>
-      )}
-
-      {estado === "falhou" && (
-        <p className="mt-3 font-semibold text-red-600">
-          O pagamento não foi concluído.
-        </p>
-      )}
-
-      {estado === "erro" && (
-        <p className="mt-3 font-semibold text-red-600">
-          Tivemos um problema para consultar seu pagamento.
-        </p>
-      )}
-
-      <div className="mt-6">
-        <Link
-          href="/"
-          className="inline-block rounded-xl bg-pink-600 px-5 py-3 font-semibold text-white"
-        >
-          Voltar para a loja
-        </Link>
-      </div>
-    </div>
+  const total = carrinho.reduce(
+    (acc, item) => acc + item.preco * item.quantidade,
+    0
   )
-}
 
-export default function CheckoutPage() {
+  async function finalizarPedido() {
+    try {
+      setLoading(true)
+
+      if (!destinatario || !sala || !whatsapp) {
+        alert("Preencha todos os campos obrigatórios")
+        return
+      }
+
+      const carrinhoFinal = carrinho.map((item) => ({
+        ...item,
+        remetente: anonimo ? "Anônimo" : remetente,
+        destinatario,
+        sala,
+        whatsapp,
+      }))
+
+      // 🔥 ENVIA PRO BACKEND CORRETAMENTE
+      const res = await fetch("/api/pedido/pagamento", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          carrinho: carrinhoFinal,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        alert("Erro ao gerar pagamento: " + JSON.stringify(data))
+        return
+      }
+
+      // 🔥 REDIRECIONA PRO MERCADO PAGO
+      window.location.href = data.init_point
+    } catch (error) {
+      console.error(error)
+      alert("Erro ao finalizar pedido")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <main className="min-h-screen bg-pink-50 p-4 md:p-8">
-      <Suspense
-        fallback={
-          <div className="mx-auto max-w-2xl rounded-2xl bg-white p-8 shadow">
-            <h1 className="text-2xl font-bold text-pink-700">
-              Status do pagamento
-            </h1>
-            <p className="mt-4 text-lg text-gray-700">
-              Verificando pagamento...
-            </p>
-          </div>
-        }
+    <div className="p-4 max-w-md mx-auto">
+      <h1 className="text-xl font-bold mb-4">Finalizar Pedido</h1>
+
+      <label className="flex items-center gap-2 mb-2">
+        <input
+          type="checkbox"
+          checked={anonimo}
+          onChange={(e) => setAnonimo(e.target.checked)}
+        />
+        Enviar anonimamente
+      </label>
+
+      {!anonimo && (
+        <input
+          className="border p-2 w-full mb-2"
+          placeholder="Seu nome"
+          value={remetente}
+          onChange={(e) => setRemetente(e.target.value)}
+        />
+      )}
+
+      <input
+        className="border p-2 w-full mb-2"
+        placeholder="Nome de quem recebe"
+        value={destinatario}
+        onChange={(e) => setDestinatario(e.target.value)}
+      />
+
+      <select
+        className="border p-2 w-full mb-2"
+        value={sala}
+        onChange={(e) => setSala(e.target.value)}
       >
-        <CheckoutContent />
-      </Suspense>
-    </main>
+        <option value="">Selecione a sala</option>
+
+        <option>Professor(a)</option>
+
+        <option>1 Eletrônica</option>
+        <option>1 Ene. Renovável</option>
+        <option>1 Fab. Mecânica</option>
+        <option>1 Informática</option>
+        <option>1 Logística</option>
+        <option>1 Seg. Trabalho</option>
+
+        <option>2 Eletrônica</option>
+        <option>2 Ene. Renovável</option>
+        <option>2 Fab. Mecânica</option>
+        <option>2 Informática</option>
+        <option>2 Logística</option>
+        <option>2 Seg. Trabalho</option>
+
+        <option>3 Eletrônica</option>
+        <option>3 Informática</option>
+        <option>3 Logística</option>
+        <option>3 Propedêutico</option>
+        <option>3 Seg. Trabalho</option>
+      </select>
+
+      <input
+        className="border p-2 w-full mb-2"
+        placeholder="Seu WhatsApp"
+        value={whatsapp}
+        onChange={(e) => setWhatsapp(e.target.value)}
+      />
+
+      <div className="mt-4">
+        <p>Itens: {carrinho.length}</p>
+        <p className="font-bold">Total: R$ {total.toFixed(2)}</p>
+      </div>
+
+      <button
+        onClick={finalizarPedido}
+        disabled={loading}
+        className="bg-pink-600 text-white w-full p-3 mt-4 rounded"
+      >
+        {loading ? "Processando..." : "Pagar com Pix"}
+      </button>
+    </div>
   )
 }
