@@ -1,36 +1,34 @@
 import { NextResponse } from "next/server"
+import { MercadoPagoConfig, Preference } from "mercadopago"
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
+    const { itens, pedido } = body
 
-    const carrinho = body.carrinho
+    const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
 
-    if (!carrinho || carrinho.length === 0) {
-      return NextResponse.json({ error: "Carrinho vazio" }, { status: 400 })
+    if (!token) {
+      return NextResponse.json(
+        { ok: false, error: "Token não encontrado" },
+        { status: 500 }
+      )
     }
 
-    const items = carrinho.map((item: any) => ({
-      title: item.nome,
-      quantity: item.quantidade,
-      unit_price: item.preco,
-      currency_id: "BRL",
-    }))
+    const client = new MercadoPagoConfig({
+      accessToken: token,
+    })
 
-    const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
-      },
-      body: JSON.stringify({
-        items,
+    const preference = new Preference(client)
+
+    const res = await preference.create({
+      body: {
+        items: itens,
 
         metadata: {
-          pedido: carrinho,
+          pedido,
         },
-
-        external_reference: "pedido_" + Date.now(),
 
         payment_methods: {
           excluded_payment_types: [
@@ -40,24 +38,28 @@ export async function POST(req: Request) {
           ],
         },
 
+        notification_url: `${siteUrl}/api/mercadopago/webhook`,
+
         back_urls: {
-          success: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?status=success`,
-          failure: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?status=failure`,
-          pending: `${process.env.NEXT_PUBLIC_SITE_URL}/checkout?status=pending`,
+          success: `${siteUrl}/checkout?status=success`,
+          failure: `${siteUrl}/checkout?status=failure`,
+          pending: `${siteUrl}/checkout?status=pending`,
         },
 
         auto_return: "approved",
-      }),
+      },
     })
-
-    const data = await response.json()
 
     return NextResponse.json({
-      init_point: data.init_point,
+      ok: true,
+      init_point: res.init_point,
     })
-
-  } catch (error) {
+  } catch (error: any) {
     console.error(error)
-    return NextResponse.json({ error: "Erro interno" }, { status: 500 })
+
+    return NextResponse.json(
+      { ok: false, error: "Erro ao criar pagamento" },
+      { status: 500 }
+    )
   }
 }
