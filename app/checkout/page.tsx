@@ -27,7 +27,12 @@ export default function Checkout() {
       setLoading(true)
 
       if (!destinatario || !sala || !whatsapp) {
-        alert("Preencha todos os campos obrigatórios")
+        alert("Preencha tudo")
+        return
+      }
+
+      if (!carrinho || carrinho.length === 0) {
+        alert("Carrinho vazio")
         return
       }
 
@@ -39,7 +44,6 @@ export default function Checkout() {
         whatsapp,
       }))
 
-      // 🔥 ENVIA PRO BACKEND CORRETAMENTE
       const res = await fetch("/api/pedido/pagamento", {
         method: "POST",
         headers: {
@@ -53,15 +57,14 @@ export default function Checkout() {
       const data = await res.json()
 
       if (!res.ok) {
-        alert("Erro ao gerar pagamento: " + JSON.stringify(data))
+        alert("Erro: " + JSON.stringify(data))
         return
       }
 
-      // 🔥 REDIRECIONA PRO MERCADO PAGO
       window.location.href = data.init_point
-    } catch (error) {
-      console.error(error)
-      alert("Erro ao finalizar pedido")
+    } catch (err) {
+      console.error(err)
+      alert("Erro ao pagar")
     } finally {
       setLoading(false)
     }
@@ -69,9 +72,9 @@ export default function Checkout() {
 
   return (
     <div className="p-4 max-w-md mx-auto">
-      <h1 className="text-xl font-bold mb-4">Finalizar Pedido</h1>
+      <h1 className="text-xl font-bold mb-4">Checkout</h1>
 
-      <label className="flex items-center gap-2 mb-2">
+      <label className="flex gap-2 mb-2">
         <input
           type="checkbox"
           checked={anonimo}
@@ -91,7 +94,7 @@ export default function Checkout() {
 
       <input
         className="border p-2 w-full mb-2"
-        placeholder="Nome de quem recebe"
+        placeholder="Destinatário"
         value={destinatario}
         onChange={(e) => setDestinatario(e.target.value)}
       />
@@ -101,8 +104,7 @@ export default function Checkout() {
         value={sala}
         onChange={(e) => setSala(e.target.value)}
       >
-        <option value="">Selecione a sala</option>
-
+        <option value="">Selecione</option>
         <option>Professor(a)</option>
 
         <option>1 Eletrônica</option>
@@ -128,15 +130,12 @@ export default function Checkout() {
 
       <input
         className="border p-2 w-full mb-2"
-        placeholder="Seu WhatsApp"
+        placeholder="WhatsApp"
         value={whatsapp}
         onChange={(e) => setWhatsapp(e.target.value)}
       />
 
-      <div className="mt-4">
-        <p>Itens: {carrinho.length}</p>
-        <p className="font-bold">Total: R$ {total.toFixed(2)}</p>
-      </div>
+      <p>Total: R$ {total.toFixed(2)}</p>
 
       <button
         onClick={finalizarPedido}

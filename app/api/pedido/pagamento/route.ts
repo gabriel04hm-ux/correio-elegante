@@ -10,7 +10,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Carrinho vazio" }, { status: 400 })
     }
 
-    // 🔥 monta itens para o Mercado Pago
     const items = carrinho.map((item: any) => ({
       title: item.nome,
       quantity: item.quantidade,
@@ -27,12 +26,10 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         items,
 
-        // 🔥 ESSENCIAL PRA WEBHOOK FUNCIONAR
         metadata: {
           pedido: carrinho,
         },
 
-        // 🔥 ajuda a identificar no futuro
         external_reference: "pedido_" + Date.now(),
 
         payment_methods: {
@@ -60,7 +57,7 @@ export async function POST(req: Request) {
     })
 
   } catch (error) {
-    console.error("Erro ao criar pagamento:", error)
+    console.error(error)
     return NextResponse.json({ error: "Erro interno" }, { status: 500 })
   }
 }
