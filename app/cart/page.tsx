@@ -2,6 +2,8 @@
 
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
+import { ArrowLeft, ShoppingCart } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 type Produto = {
   id: number
@@ -19,6 +21,8 @@ type DadosItem = {
 }
 
 export default function CartPage() {
+  const router = useRouter()
+
   const [carrinho, setCarrinho] = useState<Record<number, number>>({})
   const [dados, setDados] = useState<Record<number, DadosItem[]>>({})
   const [whats, setWhats] = useState("")
@@ -285,17 +289,26 @@ export default function CartPage() {
   }
 
   return (
-    <main className="min-h-screen bg-pink-50 p-4 md:p-8">
+    <main className="min-h-screen bg-gradient-to-b from-pink-50 via-rose-50 to-white p-4 md:p-8 text-black">
       <div className="mx-auto max-w-5xl">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <h1 className="text-2xl font-bold text-pink-700">Carrinho</h1>
+        <div className="sticky top-0 z-40 mb-6 rounded-2xl bg-pink-50/90 backdrop-blur">
+          <div className="flex items-center justify-between gap-4 px-1 py-2">
+            <button
+              onClick={() => router.back()}
+              className="p-2 rounded-full bg-white shadow border border-pink-100 hover:bg-pink-50 transition"
+            >
+              <ArrowLeft size={22} className="text-pink-600" />
+            </button>
 
-          <Link
-            href="/"
-            className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-pink-700 shadow"
-          >
-            Voltar para a loja
-          </Link>
+            <h1 className="text-2xl font-bold text-pink-700">Carrinho</h1>
+
+            <Link
+              href="/cart"
+              className="p-2 rounded-full bg-white shadow border border-pink-100"
+            >
+              <ShoppingCart size={22} className="text-pink-600" />
+            </Link>
+          </div>
         </div>
 
         {itensNoCarrinho.length === 0 ? (
