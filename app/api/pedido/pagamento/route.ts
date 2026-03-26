@@ -7,7 +7,7 @@ export async function POST(req: Request) {
     const { itens, pedido } = body
 
     const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+    const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL
 
     if (!token) {
       return NextResponse.json(
@@ -16,12 +16,14 @@ export async function POST(req: Request) {
       )
     }
 
-    if (!siteUrl) {
+    if (!rawSiteUrl) {
       return NextResponse.json(
         { ok: false, error: "NEXT_PUBLIC_SITE_URL não encontrada no ambiente" },
         { status: 500 }
       )
     }
+
+    const siteUrl = rawSiteUrl.replace(/\/+$/, "")
 
     if (!itens || !Array.isArray(itens) || itens.length === 0) {
       return NextResponse.json(
@@ -71,6 +73,8 @@ export async function POST(req: Request) {
 
     const preference = new Preference(client)
 
+    const notificationUrl = `${siteUrl}/api/mercadopago/webhook`
+
     const res = await preference.create({
       body: {
         items: itensFormatados,
@@ -86,7 +90,7 @@ export async function POST(req: Request) {
           ],
           installments: 1,
         },
-        notification_url: `${siteUrl}/api/mercadopago/webhook`,
+        notification_url: notificationUrl,
         back_urls: {
           success: `${siteUrl}/checkout?status=success`,
           failure: `${siteUrl}/checkout?status=failure`,
@@ -97,6 +101,13 @@ export async function POST(req: Request) {
     })
 
     const linkPagamento = res.init_point || res.sandbox_init_point
+
+    console.log("Preferência criada:", {
+      preference_id: res.id,
+      init_point: linkPagamento,
+      notification_url: notificationUrl,
+      siteUrl,
+    })
 
     if (!linkPagamento) {
       return NextResponse.json(
