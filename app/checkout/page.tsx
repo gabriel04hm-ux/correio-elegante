@@ -1,21 +1,70 @@
 "use client"
 
 import Link from "next/link"
-import { Suspense, useEffect } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
-import { CheckCircle2, Clock3, XCircle, ArrowLeft, ShoppingCart } from "lucide-react"
+import {
+  CheckCircle2,
+  Clock3,
+  XCircle,
+  ArrowLeft,
+  ShoppingCart,
+} from "lucide-react"
 
 function CheckoutConteudo() {
   const searchParams = useSearchParams()
-  const status = searchParams.get("status")
+  const statusUrl = searchParams.get("status")
+  const paymentId =
+    searchParams.get("payment_id") ||
+    searchParams.get("collection_id") ||
+    searchParams.get("paymentId")
+
+  const [statusReal, setStatusReal] = useState<string>(statusUrl || "pending")
+  const [carregando, setCarregando] = useState(true)
 
   useEffect(() => {
-    if (status === "success") {
-      localStorage.removeItem("carrinho")
-      localStorage.removeItem("carrinhoDados")
-      localStorage.removeItem("carrinhoWhats")
+    let ativo = true
+
+    async function verificar() {
+      try {
+        if (!paymentId) {
+          setStatusReal(statusUrl || "pending")
+          setCarregando(false)
+          return
+        }
+
+        const resposta = await fetch(
+          `/api/pagamento/status?paymentId=${encodeURIComponent(paymentId)}`
+        )
+
+        const dados = await resposta.json()
+
+        if (!ativo) return
+
+        if (dados?.ok && dados?.aprovado) {
+          setStatusReal("success")
+          localStorage.removeItem("carrinho")
+          localStorage.removeItem("carrinhoDados")
+          localStorage.removeItem("carrinhoWhats")
+        } else {
+          setStatusReal(statusUrl || "pending")
+        }
+      } catch {
+        setStatusReal(statusUrl || "pending")
+      } finally {
+        if (ativo) setCarregando(false)
+      }
     }
-  }, [status])
+
+    verificar()
+
+    const intervalo = setInterval(verificar, 4000)
+
+    return () => {
+      ativo = false
+      clearInterval(intervalo)
+    }
+  }, [paymentId, statusUrl])
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50 via-rose-50 to-white p-4 text-black">
@@ -39,19 +88,31 @@ function CheckoutConteudo() {
         </div>
 
         <div className="bg-white rounded-3xl shadow-lg border border-pink-100 p-6 text-center">
-          {status === "success" && (
+          {carregando && (
+            <>
+              <Clock3 size={64} className="text-pink-500 mx-auto" />
+              <h2 className="text-2xl font-bold text-gray-800 mt-4">
+                Verificando pagamento
+              </h2>
+              <p className="text-gray-600 mt-2">
+                Aguarde um instante enquanto confirmamos seu pagamento.
+              </p>
+            </>
+          )}
+
+          {!carregando && statusReal === "success" && (
             <>
               <CheckCircle2 size={64} className="text-green-500 mx-auto" />
               <h2 className="text-2xl font-bold text-gray-800 mt-4">
                 Pagamento aprovado
               </h2>
               <p className="text-gray-600 mt-2">
-                Seu pagamento foi recebido com sucesso. Agora o pedido deve ser processado automaticamente.
+                Seu pagamento foi confirmado com sucesso e o pedido já foi registrado.
               </p>
             </>
           )}
 
-          {status === "pending" && (
+          {!carregando && statusReal === "pending" && (
             <>
               <Clock3 size={64} className="text-yellow-500 mx-auto" />
               <h2 className="text-2xl font-bold text-gray-800 mt-4">
@@ -63,7 +124,7 @@ function CheckoutConteudo() {
             </>
           )}
 
-          {status === "failure" && (
+          {!carregando && statusReal === "failure" && (
             <>
               <XCircle size={64} className="text-red-500 mx-auto" />
               <h2 className="text-2xl font-bold text-gray-800 mt-4">
@@ -71,18 +132,6 @@ function CheckoutConteudo() {
               </h2>
               <p className="text-gray-600 mt-2">
                 Houve um problema no pagamento. Você pode tentar novamente.
-              </p>
-            </>
-          )}
-
-          {!status && (
-            <>
-              <Clock3 size={64} className="text-pink-500 mx-auto" />
-              <h2 className="text-2xl font-bold text-gray-800 mt-4">
-                Aguardando status do pagamento
-              </h2>
-              <p className="text-gray-600 mt-2">
-                Esta página mostra o retorno do pagamento.
               </p>
             </>
           )}
