@@ -18,6 +18,7 @@ type DadosItem = {
   nome: string
   sala: string
   anonimo: boolean
+  cpf: string
 }
 
 type EstoqueItem = {
@@ -47,16 +48,17 @@ export default function CartPage() {
   const [carregandoEstoque, setCarregandoEstoque] = useState(true)
 
   const produtos: Produto[] = [
-    { id: 1, nome: "Produto 1", preco: 1, imagem: "/p1.jpg" },
-    { id: 2, nome: "Produto 2", preco: 6, imagem: "/p2.jpg" },
-    { id: 3, nome: "Produto 3", preco: 7, imagem: "/p3.jpg" },
-    { id: 4, nome: "Produto 4", preco: 8, imagem: "/p4.jpg" },
-    { id: 5, nome: "Produto 5", preco: 10, imagem: "/p5.jpg" },
+    { id: 1, nome: "Coração", preco: 0.5, imagem: "/p1.jpg" },
+    { id: 2, nome: "Bala c/ coração", preco: 0.75, imagem: "/p2.jpg" },
+    { id: 3, nome: "Pirulito c/ coração", preco: 1, imagem: "/p3.jpg" },
+    { id: 4, nome: "Bombom c/ coração", preco: 3.5, imagem: "/p4.jpg" },
+    { id: 5, nome: "Fini c/ coração", preco: 2.5, imagem: "/p5.jpg" },
+    { id: 6, nome: "Polaroide c/ coração", preco: 4, imagem: "/p1.jpg" },
+    { id: 7, nome: "Flor c/ coração", preco: 12, imagem: "/p2.jpg" },
+    { id: 8, nome: "Ingresso Dia D", preco: 3, imagem: "/p3.jpg" },
   ]
 
   const salas = [
-    "Professor(a)",
-
     "1 Eletrônica",
     "1 Ene. Renovável",
     "1 Fab. Mecânica",
@@ -76,7 +78,13 @@ export default function CartPage() {
     "3 Logística",
     "3 Propedêutico",
     "3 Seg. Trabalho",
+
+    "Professor(a)",
   ]
+
+  function isIngressoDiaD(produto: Produto) {
+    return produto.nome === "Ingresso Dia D"
+  }
 
   function produtoDisponivel(nomeProduto: string, estoqueAtual?: EstoquePorProduto) {
     const mapa = estoqueAtual || estoquePorProduto
@@ -207,6 +215,15 @@ export default function CartPage() {
     return `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`
   }
 
+  function formatarCPF(v: string) {
+    const n = v.replace(/\D/g, "").slice(0, 11)
+
+    if (n.length <= 3) return n
+    if (n.length <= 6) return `${n.slice(0, 3)}.${n.slice(3)}`
+    if (n.length <= 9) return `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6)}`
+    return `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6, 9)}-${n.slice(9)}`
+  }
+
   function alterarQuantidade(id: number, delta: number) {
     const produto = produtos.find((p) => p.id === id)
 
@@ -250,6 +267,7 @@ export default function CartPage() {
             nome: "",
             sala: "",
             anonimo: false,
+            cpf: "",
           })
         }
         novo[id] = novosItens
@@ -278,6 +296,7 @@ export default function CartPage() {
           nome: "",
           sala: "",
           anonimo: false,
+          cpf: "",
         })
       }
 
@@ -336,13 +355,33 @@ export default function CartPage() {
           const item = listaDados[i]
 
           if (!item?.nome?.trim()) {
-            alert(`Preencha o destinatário do item ${i + 1} de ${produto.nome}`)
+            alert(`Preencha o nome do item ${i + 1} de ${produto.nome}`)
             return
           }
 
           if (!item?.sala?.trim()) {
             alert(`Selecione a sala do item ${i + 1} de ${produto.nome}`)
             return
+          }
+
+          if (isIngressoDiaD(produto)) {
+            const cpfLimpo = String(item?.cpf || "").replace(/\D/g, "")
+
+            if (cpfLimpo.length !== 11) {
+              alert(`Digite um CPF válido para o item ${i + 1} de ${produto.nome}`)
+              return
+            }
+
+            pedido.push({
+              produto: produto.nome,
+              mensagem: `CPF: ${formatarCPF(cpfLimpo)}`,
+              remetente: "",
+              destinatario: item.nome.trim(),
+              sala: item.sala.trim(),
+              whatsapp: numeroLimpo,
+            })
+
+            continue
           }
 
           pedido.push({
@@ -456,6 +495,7 @@ export default function CartPage() {
             {itensNoCarrinho.map((produto) => {
               const quantidade = carrinho[produto.id] || 0
               const esgotado = !produtoDisponivel(produto.nome)
+              const produtoEhIngresso = isIngressoDiaD(produto)
 
               return (
                 <section
@@ -525,6 +565,7 @@ export default function CartPage() {
                         nome: "",
                         sala: "",
                         anonimo: false,
+                        cpf: "",
                       }
 
                       return (
@@ -537,109 +578,180 @@ export default function CartPage() {
                           </h3>
 
                           <div className="grid gap-4 md:grid-cols-2">
-                            <div className="md:col-span-2">
-                              <label className="mb-1 block text-sm font-medium text-gray-700">
-                                Mensagem
-                              </label>
-                              <textarea
-                                value={item.mensagem}
-                                onChange={(e) =>
-                                  atualizarCampo(
-                                    produto.id,
-                                    index,
-                                    "mensagem",
-                                    e.target.value
-                                  )
-                                }
-                                className="min-h-[100px] w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
-                                placeholder="Digite a mensagem"
-                              />
-                            </div>
+                            {produtoEhIngresso ? (
+                              <>
+                                <div>
+                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Nome completo *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={item.nome}
+                                    onChange={(e) =>
+                                      atualizarCampo(
+                                        produto.id,
+                                        index,
+                                        "nome",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    placeholder="Digite o nome completo"
+                                  />
+                                </div>
 
-                            <div className="md:col-span-2">
-                              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                                <input
-                                  type="checkbox"
-                                  checked={item.anonimo || false}
-                                  onChange={(e) =>
-                                    atualizarCampo(
-                                      produto.id,
-                                      index,
-                                      "anonimo",
-                                      e.target.checked
-                                    )
-                                  }
-                                />
-                                Enviar anonimamente
-                              </label>
-                            </div>
+                                <div>
+                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    CPF *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={formatarCPF(item.cpf || "")}
+                                    onChange={(e) =>
+                                      atualizarCampo(
+                                        produto.id,
+                                        index,
+                                        "cpf",
+                                        e.target.value.replace(/\D/g, "").slice(0, 11)
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    placeholder="000.000.000-00"
+                                  />
+                                </div>
 
-                            {!item.anonimo && (
-                              <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">
-                                  Remetente
-                                </label>
-                                <input
-                                  type="text"
-                                  value={item.remetente}
-                                  onChange={(e) =>
-                                    atualizarCampo(
-                                      produto.id,
-                                      index,
-                                      "remetente",
-                                      e.target.value
-                                    )
-                                  }
-                                  className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
-                                  placeholder="Seu nome"
-                                />
-                              </div>
+                                <div className="md:col-span-2">
+                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Sala *
+                                  </label>
+                                  <select
+                                    value={item.sala}
+                                    onChange={(e) =>
+                                      atualizarCampo(
+                                        produto.id,
+                                        index,
+                                        "sala",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                  >
+                                    <option value="">Selecione a sala</option>
+                                    {salas.map((sala) => (
+                                      <option key={sala} value={sala}>
+                                        {sala}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="md:col-span-2">
+                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Mensagem
+                                  </label>
+                                  <textarea
+                                    value={item.mensagem}
+                                    onChange={(e) =>
+                                      atualizarCampo(
+                                        produto.id,
+                                        index,
+                                        "mensagem",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="min-h-[100px] w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    placeholder="Digite a mensagem"
+                                  />
+                                </div>
+
+                                <div className="md:col-span-2">
+                                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                    <input
+                                      type="checkbox"
+                                      checked={item.anonimo || false}
+                                      onChange={(e) =>
+                                        atualizarCampo(
+                                          produto.id,
+                                          index,
+                                          "anonimo",
+                                          e.target.checked
+                                        )
+                                      }
+                                    />
+                                    Enviar anonimamente
+                                  </label>
+                                </div>
+
+                                {!item.anonimo && (
+                                  <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                                      Remetente
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={item.remetente}
+                                      onChange={(e) =>
+                                        atualizarCampo(
+                                          produto.id,
+                                          index,
+                                          "remetente",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                      placeholder="Seu nome"
+                                    />
+                                  </div>
+                                )}
+
+                                <div>
+                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Destinatário *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={item.nome}
+                                    onChange={(e) =>
+                                      atualizarCampo(
+                                        produto.id,
+                                        index,
+                                        "nome",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    placeholder="Nome de quem vai receber"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Sala *
+                                  </label>
+                                  <select
+                                    value={item.sala}
+                                    onChange={(e) =>
+                                      atualizarCampo(
+                                        produto.id,
+                                        index,
+                                        "sala",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                  >
+                                    <option value="">Selecione a sala</option>
+                                    {salas.map((sala) => (
+                                      <option key={sala} value={sala}>
+                                        {sala}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </>
                             )}
-
-                            <div>
-                              <label className="mb-1 block text-sm font-medium text-gray-700">
-                                Destinatário *
-                              </label>
-                              <input
-                                type="text"
-                                value={item.nome}
-                                onChange={(e) =>
-                                  atualizarCampo(
-                                    produto.id,
-                                    index,
-                                    "nome",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
-                                placeholder="Nome de quem vai receber"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="mb-1 block text-sm font-medium text-gray-700">
-                                Sala *
-                              </label>
-                              <select
-                                value={item.sala}
-                                onChange={(e) =>
-                                  atualizarCampo(
-                                    produto.id,
-                                    index,
-                                    "sala",
-                                    e.target.value
-                                  )
-                                }
-                                className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
-                              >
-                                <option value="">Selecione a sala</option>
-                                {salas.map((sala) => (
-                                  <option key={sala} value={sala}>
-                                    {sala}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
                           </div>
                         </div>
                       )

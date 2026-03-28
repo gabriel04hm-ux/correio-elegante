@@ -47,43 +47,67 @@ export default function Home() {
   const produtos: Produto[] = [
     {
       id: 1,
-      nome: "Produto 1",
-      preco: 5,
+      nome: "Coração",
+      preco: 0.5,
       imagem: "/p1.jpg",
       descricao:
-        "Descrição do produto 1. Ideal para surpreender com carinho e tornar o momento ainda mais especial.",
+        "Um gesto simples e cheio de carinho para surpreender alguém especial.",
     },
     {
       id: 2,
-      nome: "Produto 2",
-      preco: 6,
+      nome: "Bala c/ coração",
+      preco: 0.75,
       imagem: "/p2.jpg",
       descricao:
-        "Descrição do produto 2. Uma opção linda para presentear de forma simples, rápida e especial.",
+        "Um mimo doce com uma mensagem especial para alegrar o dia.",
     },
     {
       id: 3,
-      nome: "Produto 3",
-      preco: 4,
+      nome: "Pirulito c/ coração",
+      preco: 1,
       imagem: "/p3.jpg",
       descricao:
-        "Descrição do produto 3. Perfeito para quem quer emocionar e deixar o pedido inesquecível.",
+        "Uma forma divertida e doce de demonstrar carinho.",
     },
     {
       id: 4,
-      nome: "Produto 4",
-      preco: 7,
+      nome: "Bombom c/ coração",
+      preco: 3.5,
       imagem: "/p4.jpg",
       descricao:
-        "Descrição do produto 4. Uma escolha diferenciada para presentear com estilo e personalidade.",
+        "Perfeito para surpreender com algo mais especial e saboroso.",
     },
     {
       id: 5,
-      nome: "Produto 5",
-      preco: 3,
+      nome: "Fini c/ coração",
+      preco: 2.5,
       imagem: "/p5.jpg",
       descricao:
-        "Descrição do produto 5. Ótima opção para lembranças delicadas e cheias de significado.",
+        "Uma opção divertida e colorida para presentear.",
+    },
+    {
+      id: 6,
+      nome: "Polaroide c/ coração",
+      preco: 4,
+      imagem: "/p1.jpg",
+      descricao:
+        "Inclui uma foto especial para tornar o momento inesquecível.",
+    },
+    {
+      id: 7,
+      nome: "Flor c/ coração",
+      preco: 12,
+      imagem: "/p2.jpg",
+      descricao:
+        "Um presente completo, delicado e cheio de significado.",
+    },
+    {
+      id: 8,
+      nome: "Ingresso Dia D",
+      preco: 3,
+      imagem: "/p3.jpg",
+      descricao:
+        "Ingresso especial para o Dia D. Basta preencher nome completo, sala e CPF.",
     },
   ]
 
@@ -447,7 +471,7 @@ export default function Home() {
                       </h3>
 
                       <p className="font-extrabold text-pink-600 text-lg mt-1">
-                        R$ {p.preco}
+                        R$ {p.preco.toFixed(2)}
                       </p>
 
                       <p className="text-xs text-gray-500 mt-2 line-clamp-2">
