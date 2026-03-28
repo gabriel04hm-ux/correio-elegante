@@ -17,7 +17,8 @@ function CheckoutConteudo() {
   const paymentId =
     searchParams.get("payment_id") ||
     searchParams.get("collection_id") ||
-    searchParams.get("paymentId")
+    searchParams.get("paymentId") ||
+    ""
 
   const [statusReal, setStatusReal] = useState<string>(statusUrl || "pending")
   const [carregando, setCarregando] = useState(true)
@@ -27,14 +28,11 @@ function CheckoutConteudo() {
 
     async function verificar() {
       try {
-        if (!paymentId) {
-          setStatusReal(statusUrl || "pending")
-          setCarregando(false)
-          return
-        }
+        const referencia =
+          localStorage.getItem("referenciaPagamentoAtual") || ""
 
         const resposta = await fetch(
-          `/api/pagamento/status?paymentId=${encodeURIComponent(paymentId)}`
+          `/api/pagamento/status?paymentId=${encodeURIComponent(paymentId)}&referencia=${encodeURIComponent(referencia)}`
         )
 
         const dados = await resposta.json()
@@ -46,18 +44,18 @@ function CheckoutConteudo() {
           localStorage.removeItem("carrinho")
           localStorage.removeItem("carrinhoDados")
           localStorage.removeItem("carrinhoWhats")
+          localStorage.removeItem("referenciaPagamentoAtual")
         } else {
           setStatusReal(statusUrl || "pending")
         }
       } catch {
-        setStatusReal(statusUrl || "pending")
+        if (ativo) setStatusReal(statusUrl || "pending")
       } finally {
         if (ativo) setCarregando(false)
       }
     }
 
     verificar()
-
     const intervalo = setInterval(verificar, 4000)
 
     return () => {

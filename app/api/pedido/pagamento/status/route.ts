@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 
 export async function GET(req: NextRequest) {
   try {
-    const paymentId = req.nextUrl.searchParams.get("paymentId")
+    const paymentId = req.nextUrl.searchParams.get("paymentId") || ""
+    const referencia = req.nextUrl.searchParams.get("referencia") || ""
 
-    if (!paymentId) {
+    if (!paymentId && !referencia) {
       return NextResponse.json(
-        { ok: false, error: "paymentId não informado" },
+        { ok: false, error: "paymentId ou referencia não informados" },
         { status: 400 }
       )
     }
@@ -21,7 +22,10 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const url = `${scriptUrl}?paymentId=${encodeURIComponent(paymentId)}`
+    const url =
+      `${scriptUrl}?paymentId=${encodeURIComponent(paymentId)}` +
+      `&referencia=${encodeURIComponent(referencia)}`
+
     const resposta = await fetch(url, { method: "GET" })
     const texto = await resposta.text()
 

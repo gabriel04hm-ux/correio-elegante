@@ -39,6 +39,8 @@ export async function POST(req: Request) {
       )
     }
 
+    const referencia = `pedido_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+
     const itensFormatados = itens.map((item: any) => ({
       id: String(item.id ?? ""),
       title: String(item.title ?? "Pedido"),
@@ -78,8 +80,10 @@ export async function POST(req: Request) {
     const res = await preference.create({
       body: {
         items: itensFormatados,
+        external_reference: referencia,
         metadata: {
           pedido: JSON.stringify(pedido),
+          referencia,
         },
         payment_methods: {
           excluded_payment_types: [
@@ -102,13 +106,6 @@ export async function POST(req: Request) {
 
     const linkPagamento = res.init_point || res.sandbox_init_point
 
-    console.log("Preferência criada:", {
-      preference_id: res.id,
-      init_point: linkPagamento,
-      notification_url: notificationUrl,
-      siteUrl,
-    })
-
     if (!linkPagamento) {
       return NextResponse.json(
         {
@@ -124,6 +121,7 @@ export async function POST(req: Request) {
       ok: true,
       init_point: linkPagamento,
       preference_id: res.id,
+      referencia,
     })
   } catch (error: any) {
     console.error("Erro detalhado em /api/pedido/pagamento:", error)

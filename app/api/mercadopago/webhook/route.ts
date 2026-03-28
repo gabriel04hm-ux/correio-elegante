@@ -85,6 +85,11 @@ export async function POST(req: NextRequest) {
     }
 
     const pedidoRaw = paymentInfo?.metadata?.pedido
+    const referencia = String(
+      paymentInfo?.metadata?.referencia ||
+        paymentInfo?.external_reference ||
+        ""
+    ).trim()
 
     if (!pedidoRaw) {
       console.log("Sem pedido no metadata")
@@ -120,6 +125,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         paymentId: String(paymentId),
+        referencia,
         pedido,
       }),
     })
@@ -163,6 +169,7 @@ export async function POST(req: NextRequest) {
       {
         ok: true,
         paymentId: String(paymentId),
+        referencia,
         respostaPlanilha: jsonPlanilha || textoPlanilha,
       },
       { status: 200 }
