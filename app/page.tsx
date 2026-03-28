@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import {
   ShoppingCart,
@@ -44,6 +44,11 @@ export default function Home() {
   const [estoquePorProduto, setEstoquePorProduto] = useState<EstoquePorProduto>({})
   const [carregandoEstoque, setCarregandoEstoque] = useState(true)
   const [indiceCarousel, setIndiceCarousel] = useState(0)
+
+  const touchStartX = useRef<number | null>(null)
+  const touchEndX = useRef<number | null>(null)
+  const mouseStartX = useRef<number | null>(null)
+  const mouseEndX = useRef<number | null>(null)
 
   const produtos: Produto[] = [
     {
@@ -120,6 +125,16 @@ export default function Home() {
     "/p4.jpg",
     "/p5.jpg",
   ]
+
+  function proximaFoto() {
+    setIndiceCarousel((prev) => (prev + 1) % fotosTerceirao.length)
+  }
+
+  function fotoAnterior() {
+    setIndiceCarousel((prev) =>
+      prev === 0 ? fotosTerceirao.length - 1 : prev - 1
+    )
+  }
 
   function atualizarTotalCarrinho() {
     const carrinho: Record<string, number> = JSON.parse(
@@ -221,7 +236,7 @@ export default function Home() {
     if (fotosTerceirao.length <= 1) return
 
     const intervalo = setInterval(() => {
-      setIndiceCarousel((prev) => (prev + 1) % fotosTerceirao.length)
+      proximaFoto()
     }, 3000)
 
     return () => clearInterval(intervalo)
@@ -260,6 +275,56 @@ export default function Home() {
     setTimeout(() => setAnimar(false), 300)
   }
 
+  function iniciarToque(x: number) {
+    touchStartX.current = x
+    touchEndX.current = x
+  }
+
+  function moverToque(x: number) {
+    touchEndX.current = x
+  }
+
+  function finalizarToque() {
+    if (touchStartX.current === null || touchEndX.current === null) return
+
+    const distancia = touchStartX.current - touchEndX.current
+
+    if (distancia > 50) {
+      proximaFoto()
+    } else if (distancia < -50) {
+      fotoAnterior()
+    }
+
+    touchStartX.current = null
+    touchEndX.current = null
+  }
+
+  function iniciarMouse(x: number) {
+    mouseStartX.current = x
+    mouseEndX.current = x
+  }
+
+  function moverMouse(x: number) {
+    if (mouseStartX.current !== null) {
+      mouseEndX.current = x
+    }
+  }
+
+  function finalizarMouse() {
+    if (mouseStartX.current === null || mouseEndX.current === null) return
+
+    const distancia = mouseStartX.current - mouseEndX.current
+
+    if (distancia > 50) {
+      proximaFoto()
+    } else if (distancia < -50) {
+      fotoAnterior()
+    }
+
+    mouseStartX.current = null
+    mouseEndX.current = null
+  }
+
   const filtrados = produtos.filter((p) =>
     p.nome.toLowerCase().includes(busca.toLowerCase())
   )
@@ -267,15 +332,15 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-pink-50 via-rose-50 to-white text-black">
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-pink-100 shadow-sm">
-        <div className="flex justify-between items-center p-4 max-w-6xl mx-auto">
-          <div className="flex items-center gap-3 min-w-0">
-            <button
-              onClick={() => setMenuAberto(!menuAberto)}
-              className="p-2 rounded-lg hover:bg-pink-50 transition shrink-0"
-            >
-              <Menu size={24} className="text-pink-600" />
-            </button>
+        <div className="relative flex items-center justify-between p-4 max-w-6xl mx-auto">
+          <button
+            onClick={() => setMenuAberto(!menuAberto)}
+            className="p-2 rounded-lg hover:bg-pink-50 transition shrink-0 z-10"
+          >
+            <Menu size={24} className="text-pink-600" />
+          </button>
 
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center">
             <img
               src="/logo.png"
               alt="Logo"
@@ -283,7 +348,7 @@ export default function Home() {
             />
           </div>
 
-          <Link href="/cart" className="relative shrink-0">
+          <Link href="/cart" className="relative shrink-0 z-10">
             <ShoppingCart
               size={28}
               className={`text-pink-600 transition duration-300 ${
@@ -576,18 +641,46 @@ export default function Home() {
               Momentos do terceirão
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              Algumas fotos especiais que passam automaticamente.
+              Algumas fotos especiais que passam automaticamente e também podem ser arrastadas.
             </p>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl">
+          <div
+            className="relative overflow-hidden rounded-2xl select-none cursor-grab active:cursor-grabbing"
+            onTouchStart={(e) => iniciarToque(e.touches[0].clientX)}
+            onTouchMove={(e) => moverToque(e.touches[0].clientX)}
+            onTouchEnd={finalizarToque}
+            onMouseDown={(e) => iniciarMouse(e.clientX)}
+            onMouseMove={(e) => moverMouse(e.clientX)}
+            onMouseUp={finalizarMouse}
+            onMouseLeave={finalizarMouse}
+          >
             <img
               src={fotosTerceirao[indiceCarousel]}
               alt={`Foto ${indiceCarousel + 1} do terceirão`}
+              draggable={false}
               className="w-full h-[220px] sm:h-[320px] md:h-[420px] object-cover transition duration-700"
             />
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+
+            <button
+              type="button"
+              onClick={fotoAnterior}
+              aria-label="Foto anterior"
+              className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-pink-600 rounded-full w-10 h-10 flex items-center justify-center shadow"
+            >
+              ‹
+            </button>
+
+            <button
+              type="button"
+              onClick={proximaFoto}
+              aria-label="Próxima foto"
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-pink-600 rounded-full w-10 h-10 flex items-center justify-center shadow"
+            >
+              ›
+            </button>
 
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
               {fotosTerceirao.map((_, i) => (
