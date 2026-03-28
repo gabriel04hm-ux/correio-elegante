@@ -1,24 +1,47 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { MercadoPagoConfig, Payment } from "mercadopago"
 
-export async function POST(req: Request) {
+function extrairPaymentId(body: any, req: NextRequest) {
+  return (
+    body?.data?.id ||
+    body?.id ||
+    req.nextUrl.searchParams.get("data.id") ||
+    req.nextUrl.searchParams.get("id") ||
+    req.nextUrl.searchParams.get("resource.id") ||
+    null
+  )
+}
+
+export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    let body: any = {}
+
+    try {
+      body = await req.json()
+    } catch {
+      body = {}
+    }
 
     console.log("Webhook recebido:", JSON.stringify(body))
+    console.log("Query params webhook:", req.nextUrl.search)
 
-    const paymentId = body?.data?.id
+    const paymentId = extrairPaymentId(body, req)
 
     if (!paymentId) {
       console.log("Webhook sem paymentId")
       return NextResponse.json(
-        { ok: false, error: "paymentId não encontrado" },
-        { status: 400 }
+        {
+          ok: true,
+          ignorado: true,
+          motivo: "paymentId não encontrado",
+        },
+        { status: 200 }
       )
     }
 
     const token = process.env.MERCADO_PAGO_ACCESS_TOKEN
-    const scriptUrl = process.env.GOOGLE_SCRIPT_URL
+    const scriptUrl =
+      process.env.GOOGLE_SCRIPT_URL || process.env.URL_DO_SCRIPT_DO_GOOGLE
 
     if (!token) {
       console.error("MERCADO_PAGO_ACCESS_TOKEN não encontrada")
@@ -44,15 +67,22 @@ export async function POST(req: Request) {
     const paymentInfo: any = await payment.get({ id: String(paymentId) })
 
     console.log("Pagamento encontrado:", {
-      id: paymentId,
+      id: String(paymentId),
       status: paymentInfo?.status,
+      external_reference: paymentInfo?.external_reference,
+      metadata: paymentInfo?.metadata,
     })
 
     if (paymentInfo?.status !== "approved") {
-      return NextResponse.json({
-        ok: true,
-        status: paymentInfo?.status || "desconhecido",
-      })
+      return NextResponse.json(
+        {
+          ok: true,
+          ignorado: true,
+          paymentId: String(paymentId),
+          status: paymentInfo?.status || "desconhecido",
+        },
+        { status: 200 }
+      )
     }
 
     const pedidoRaw = paymentInfo?.metadata?.pedido
@@ -111,11 +141,14 @@ export async function POST(req: Request) {
       )
     }
 
-    return NextResponse.json({
-      ok: true,
-      paymentId: String(paymentId),
-      respostaPlanilha: textoPlanilha,
-    })
+    return NextResponse.json(
+      {
+        ok: true,
+        paymentId: String(paymentId),
+        respostaPlanilha: textoPlanilha,
+      },
+      { status: 200 }
+    )
   } catch (error: any) {
     console.error("Erro webhook:", error)
     return NextResponse.json(
@@ -126,4 +159,17 @@ export async function POST(req: Request) {
       { status: 500 }
     )
   }
+}
+
+export async function GET(req: NextRequest) {
+  console.log("GET no webhook:", req.nextUrl.search)
+
+  return NextResponse.json(
+    {
+      ok: true,
+      mensagem: "Webhook online",
+      query: req.nextUrl.search,
+    },
+    { status: 200 }
+  )
 }
