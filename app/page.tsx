@@ -43,6 +43,7 @@ export default function Home() {
   const [menuAberto, setMenuAberto] = useState(false)
   const [estoquePorProduto, setEstoquePorProduto] = useState<EstoquePorProduto>({})
   const [carregandoEstoque, setCarregandoEstoque] = useState(true)
+  const [indiceCarousel, setIndiceCarousel] = useState(0)
 
   const produtos: Produto[] = [
     {
@@ -109,6 +110,15 @@ export default function Home() {
       descricao:
         "Ingresso especial para o Dia D. Basta preencher nome completo, sala e CPF.",
     },
+  ]
+
+  const fotosTerceirao = [
+    "/banner.jpg",
+    "/p1.jpg",
+    "/p2.jpg",
+    "/p3.jpg",
+    "/p4.jpg",
+    "/p5.jpg",
   ]
 
   function atualizarTotalCarrinho() {
@@ -207,6 +217,16 @@ export default function Home() {
     carregarEstoque()
   }, [])
 
+  useEffect(() => {
+    if (fotosTerceirao.length <= 1) return
+
+    const intervalo = setInterval(() => {
+      setIndiceCarousel((prev) => (prev + 1) % fotosTerceirao.length)
+    }, 3000)
+
+    return () => clearInterval(intervalo)
+  }, [fotosTerceirao.length])
+
   function produtoDisponivel(nomeProduto: string) {
     const chave = normalizarNomeProduto(nomeProduto)
     const item = estoquePorProduto[chave]
@@ -248,25 +268,22 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-b from-pink-50 via-rose-50 to-white text-black">
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-pink-100 shadow-sm">
         <div className="flex justify-between items-center p-4 max-w-6xl mx-auto">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => setMenuAberto(!menuAberto)}
-              className="p-2 rounded-lg hover:bg-pink-50 transition"
+              className="p-2 rounded-lg hover:bg-pink-50 transition shrink-0"
             >
               <Menu size={24} className="text-pink-600" />
             </button>
 
-            <div>
-              <p className="font-bold text-lg text-pink-600 leading-none">
-                Correio Elegante
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Presentes e mensagens especiais
-              </p>
-            </div>
+            <img
+              src="/logo.png"
+              alt="Logo"
+              className="h-12 sm:h-14 w-auto object-contain"
+            />
           </div>
 
-          <Link href="/cart" className="relative">
+          <Link href="/cart" className="relative shrink-0">
             <ShoppingCart
               size={28}
               className={`text-pink-600 transition duration-300 ${
@@ -321,6 +338,13 @@ export default function Home() {
                 className="hover:text-pink-600"
               >
                 💰 Como funciona
+              </a>
+              <a
+                href="#terceirao"
+                onClick={() => setMenuAberto(false)}
+                className="hover:text-pink-600"
+              >
+                📸 Terceirão
               </a>
               <a
                 href="https://instagram.com"
@@ -540,6 +564,43 @@ export default function Home() {
               <p className="text-sm text-pink-50 mt-1">
                 Faça o pagamento e aguarde a entrega do seu pedido.
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="terceirao" className="max-w-6xl mx-auto px-4 pt-10">
+        <div className="bg-white rounded-3xl shadow-md border border-pink-100 p-4 sm:p-6 overflow-hidden">
+          <div className="mb-4">
+            <h2 className="text-2xl font-extrabold text-gray-800">
+              Momentos do terceirão
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Algumas fotos especiais que passam automaticamente.
+            </p>
+          </div>
+
+          <div className="relative overflow-hidden rounded-2xl">
+            <img
+              src={fotosTerceirao[indiceCarousel]}
+              alt={`Foto ${indiceCarousel + 1} do terceirão`}
+              className="w-full h-[220px] sm:h-[320px] md:h-[420px] object-cover transition duration-700"
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2">
+              {fotosTerceirao.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setIndiceCarousel(i)}
+                  aria-label={`Ir para foto ${i + 1}`}
+                  className={`h-2.5 w-2.5 rounded-full transition ${
+                    i === indiceCarousel ? "bg-white scale-110" : "bg-white/50"
+                  }`}
+                />
+              ))}
             </div>
           </div>
         </div>
