@@ -129,13 +129,32 @@ export async function POST(req: NextRequest) {
 
     console.log("Resposta Apps Script:", respostaPlanilha.status, textoPlanilha)
 
+    let jsonPlanilha: any = null
+
+    try {
+      jsonPlanilha = JSON.parse(textoPlanilha)
+    } catch {
+      jsonPlanilha = null
+    }
+
     if (!respostaPlanilha.ok) {
       return NextResponse.json(
         {
           ok: false,
-          error: "Erro ao enviar para a planilha",
+          error: "Erro HTTP ao enviar para a planilha",
           status: respostaPlanilha.status,
           resposta: textoPlanilha,
+        },
+        { status: 500 }
+      )
+    }
+
+    if (jsonPlanilha && jsonPlanilha.ok === false) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Apps Script retornou erro",
+          resposta: jsonPlanilha,
         },
         { status: 500 }
       )
@@ -145,7 +164,7 @@ export async function POST(req: NextRequest) {
       {
         ok: true,
         paymentId: String(paymentId),
-        respostaPlanilha: textoPlanilha,
+        respostaPlanilha: jsonPlanilha || textoPlanilha,
       },
       { status: 200 }
     )
