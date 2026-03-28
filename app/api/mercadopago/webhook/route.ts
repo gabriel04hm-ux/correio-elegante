@@ -69,7 +69,6 @@ export async function POST(req: NextRequest) {
     console.log("Pagamento encontrado:", {
       id: String(paymentId),
       status: paymentInfo?.status,
-      external_reference: paymentInfo?.external_reference,
       metadata: paymentInfo?.metadata,
     })
 
