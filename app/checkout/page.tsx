@@ -13,34 +13,55 @@ import {
 
 function CheckoutConteudo() {
   const searchParams = useSearchParams()
-  const statusUrl = searchParams.get("status")
+
+  const statusUrl = searchParams.get("status") || "pending"
+
   const paymentId =
     searchParams.get("payment_id") ||
     searchParams.get("collection_id") ||
     searchParams.get("paymentId") ||
     ""
 
-  const [statusReal, setStatusReal] = useState<string>(statusUrl || "pending")
+  const referencia =
+    searchParams.get("external_reference") ||
+    localStorage.getItem("referenciaPagamentoAtual") ||
+    ""
+
+  const [statusReal, setStatusReal] = useState<string>(statusUrl)
   const [carregando, setCarregando] = useState(true)
 
   useEffect(() => {
     let ativo = true
 
-    async function verificar() {
+    async function verificarPagamento() {
       try {
-        const referencia =
-          localStorage.getItem("referenciaPagamentoAtual") || ""
+        console.log("statusUrl:", statusUrl)
+        console.log("paymentId:", paymentId)
+        console.log("referencia:", referencia)
+
+        if (!paymentId && !referencia) {
+          if (ativo) {
+            setStatusReal(statusUrl || "pending")
+            setCarregando(false)
+          }
+          return
+        }
 
         const resposta = await fetch(
-          `/api/pagamento/status?paymentId=${encodeURIComponent(paymentId)}&referencia=${encodeURIComponent(referencia)}`
+          `/api/pedido/pagamento/status?paymentId=${encodeURIComponent(
+            paymentId
+          )}&referencia=${encodeURIComponent(referencia)}`
         )
 
         const dados = await resposta.json()
+
+        console.log("retorno /api/pedido/pagamento/status:", dados)
 
         if (!ativo) return
 
         if (dados?.ok && dados?.aprovado) {
           setStatusReal("success")
+
           localStorage.removeItem("carrinho")
           localStorage.removeItem("carrinhoDados")
           localStorage.removeItem("carrinhoWhats")
@@ -48,21 +69,28 @@ function CheckoutConteudo() {
         } else {
           setStatusReal(statusUrl || "pending")
         }
-      } catch {
-        if (ativo) setStatusReal(statusUrl || "pending")
+      } catch (error) {
+        console.error("Erro ao verificar pagamento:", error)
+
+        if (ativo) {
+          setStatusReal(statusUrl || "pending")
+        }
       } finally {
-        if (ativo) setCarregando(false)
+        if (ativo) {
+          setCarregando(false)
+        }
       }
     }
 
-    verificar()
-    const intervalo = setInterval(verificar, 4000)
+    verificarPagamento()
+
+    const intervalo = setInterval(verificarPagamento, 4000)
 
     return () => {
       ativo = false
       clearInterval(intervalo)
     }
-  }, [paymentId, statusUrl])
+  }, [paymentId, referencia, statusUrl])
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-pink-50 via-rose-50 to-white p-4 text-black">
@@ -107,6 +135,12 @@ function CheckoutConteudo() {
               <p className="text-gray-600 mt-2">
                 Seu pagamento foi confirmado com sucesso e o pedido já foi registrado.
               </p>
+
+              {paymentId && (
+                <p className="text-xs text-gray-400 mt-4">
+                  ID do pagamento: {paymentId}
+                </p>
+              )}
             </>
           )}
 
@@ -119,6 +153,12 @@ function CheckoutConteudo() {
               <p className="text-gray-600 mt-2">
                 O pagamento ainda está sendo analisado ou aguardando confirmação.
               </p>
+
+              {paymentId && (
+                <p className="text-xs text-gray-400 mt-4">
+                  ID do pagamento: {paymentId}
+                </p>
+              )}
             </>
           )}
 
