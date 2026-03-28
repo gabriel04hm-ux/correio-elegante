@@ -2,37 +2,202 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ShoppingCart, Search, Menu, MessageCircle, ShieldCheck, Truck, Star } from "lucide-react"
+import {
+  ShoppingCart,
+  Search,
+  Menu,
+  MessageCircle,
+  ShieldCheck,
+  Truck,
+  Star,
+} from "lucide-react"
+
+type EstoqueItem = {
+  produto: string
+  disponivel: boolean
+  esgotado: boolean
+}
+
+type EstoquePorProduto = Record<string, EstoqueItem>
+
+type Produto = {
+  id: number
+  nome: string
+  preco: number
+  imagem: string
+  descricao: string
+}
+
+function normalizarNomeProduto(nome: string) {
+  return String(nome || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+}
 
 export default function Home() {
   const [busca, setBusca] = useState("")
   const [animar, setAnimar] = useState(false)
   const [totalItens, setTotalItens] = useState(0)
   const [menuAberto, setMenuAberto] = useState(false)
+  const [estoquePorProduto, setEstoquePorProduto] = useState<EstoquePorProduto>({})
+  const [carregandoEstoque, setCarregandoEstoque] = useState(true)
 
-  useEffect(() => {
-    const atualizarCarrinho = () => {
-      const carrinho: Record<string, number> = JSON.parse(
-        localStorage.getItem("carrinho") || "{}"
-      )
+  const produtos: Produto[] = [
+    {
+      id: 1,
+      nome: "Produto 1",
+      preco: 5,
+      imagem: "/p1.jpg",
+      descricao:
+        "Descrição do produto 1. Ideal para surpreender com carinho e tornar o momento ainda mais especial.",
+    },
+    {
+      id: 2,
+      nome: "Produto 2",
+      preco: 6,
+      imagem: "/p2.jpg",
+      descricao:
+        "Descrição do produto 2. Uma opção linda para presentear de forma simples, rápida e especial.",
+    },
+    {
+      id: 3,
+      nome: "Produto 3",
+      preco: 4,
+      imagem: "/p3.jpg",
+      descricao:
+        "Descrição do produto 3. Perfeito para quem quer emocionar e deixar o pedido inesquecível.",
+    },
+    {
+      id: 4,
+      nome: "Produto 4",
+      preco: 7,
+      imagem: "/p4.jpg",
+      descricao:
+        "Descrição do produto 4. Uma escolha diferenciada para presentear com estilo e personalidade.",
+    },
+    {
+      id: 5,
+      nome: "Produto 5",
+      preco: 3,
+      imagem: "/p5.jpg",
+      descricao:
+        "Descrição do produto 5. Ótima opção para lembranças delicadas e cheias de significado.",
+    },
+  ]
 
-      const total = Object.values(carrinho).reduce(
-        (acc, qtd) => acc + Number(qtd),
-        0
-      )
+  function atualizarTotalCarrinho() {
+    const carrinho: Record<string, number> = JSON.parse(
+      localStorage.getItem("carrinho") || "{}"
+    )
 
-      setTotalItens(total)
+    const total = Object.values(carrinho).reduce(
+      (acc, qtd) => acc + Number(qtd),
+      0
+    )
+
+    setTotalItens(total)
+  }
+
+  function removerProdutosEsgotadosDoCarrinho(estoque: EstoquePorProduto) {
+    const carrinhoAtual: Record<string, number> = JSON.parse(
+      localStorage.getItem("carrinho") || "{}"
+    )
+
+    const carrinhoDadosAtual: Record<string, any[]> = JSON.parse(
+      localStorage.getItem("carrinhoDados") || "{}"
+    )
+
+    let houveAlteracao = false
+    const novoCarrinho: Record<string, number> = { ...carrinhoAtual }
+    const novoCarrinhoDados: Record<string, any[]> = { ...carrinhoDadosAtual }
+
+    for (const produto of produtos) {
+      const chaveEstoque = normalizarNomeProduto(produto.nome)
+      const itemEstoque = estoque[chaveEstoque]
+
+      if (itemEstoque && !itemEstoque.disponivel) {
+        const id = String(produto.id)
+
+        if (novoCarrinho[id]) {
+          delete novoCarrinho[id]
+          houveAlteracao = true
+        }
+
+        if (novoCarrinhoDados[id]) {
+          delete novoCarrinhoDados[id]
+          houveAlteracao = true
+        }
+      }
     }
 
-    atualizarCarrinho()
-    window.addEventListener("focus", atualizarCarrinho)
+    if (houveAlteracao) {
+      localStorage.setItem("carrinho", JSON.stringify(novoCarrinho))
+      localStorage.setItem("carrinhoDados", JSON.stringify(novoCarrinhoDados))
+      atualizarTotalCarrinho()
+    }
+  }
+
+  async function carregarEstoque() {
+    try {
+      setCarregandoEstoque(true)
+
+      const response = await fetch("/api/estoque", {
+        method: "GET",
+        cache: "no-store",
+      })
+
+      const data = await response.json()
+
+      if (data?.ok && data?.estoquePorProduto) {
+        setEstoquePorProduto(data.estoquePorProduto)
+        removerProdutosEsgotadosDoCarrinho(data.estoquePorProduto)
+      } else {
+        setEstoquePorProduto({})
+      }
+    } catch (error) {
+      console.error("Erro ao buscar estoque:", error)
+      setEstoquePorProduto({})
+    } finally {
+      setCarregandoEstoque(false)
+    }
+  }
+
+  useEffect(() => {
+    atualizarTotalCarrinho()
+
+    const aoFocar = () => {
+      atualizarTotalCarrinho()
+      carregarEstoque()
+    }
+
+    window.addEventListener("focus", aoFocar)
 
     return () => {
-      window.removeEventListener("focus", atualizarCarrinho)
+      window.removeEventListener("focus", aoFocar)
     }
   }, [])
 
-  function adicionar(id: number) {
+  useEffect(() => {
+    carregarEstoque()
+  }, [])
+
+  function produtoDisponivel(nomeProduto: string) {
+    const chave = normalizarNomeProduto(nomeProduto)
+    const item = estoquePorProduto[chave]
+
+    if (carregandoEstoque) return true
+    if (!item) return true
+
+    return Boolean(item.disponivel)
+  }
+
+  function adicionar(id: number, nomeProduto: string) {
+    if (!produtoDisponivel(nomeProduto)) {
+      return
+    }
+
     const carrinhoAtual: Record<string, number> = JSON.parse(
       localStorage.getItem("carrinho") || "{}"
     )
@@ -50,44 +215,6 @@ export default function Home() {
     setAnimar(true)
     setTimeout(() => setAnimar(false), 300)
   }
-
-  const produtos = [
-    {
-      id: 1,
-      nome: "Produto 1",
-      preco: 5,
-      imagem: "/p1.jpg",
-      descricao: "Descrição do produto 1. Ideal para surpreender com carinho e tornar o momento ainda mais especial.",
-    },
-    {
-      id: 2,
-      nome: "Produto 2",
-      preco: 6,
-      imagem: "/p2.jpg",
-      descricao: "Descrição do produto 2. Uma opção linda para presentear de forma simples, rápida e especial.",
-    },
-    {
-      id: 3,
-      nome: "Produto 3",
-      preco: 4,
-      imagem: "/p3.jpg",
-      descricao: "Descrição do produto 3. Perfeito para quem quer emocionar e deixar o pedido inesquecível.",
-    },
-    {
-      id: 4,
-      nome: "Produto 4",
-      preco: 7,
-      imagem: "/p4.jpg",
-      descricao: "Descrição do produto 4. Uma escolha diferenciada para presentear com estilo e personalidade.",
-    },
-    {
-      id: 5,
-      nome: "Produto 5",
-      preco: 3,
-      imagem: "/p5.jpg",
-      descricao: "Descrição do produto 5. Ótima opção para lembranças delicadas e cheias de significado.",
-    },
-  ]
 
   const filtrados = produtos.filter((p) =>
     p.nome.toLowerCase().includes(busca.toLowerCase())
@@ -134,30 +261,59 @@ export default function Home() {
         {menuAberto && (
           <div className="border-t border-pink-100 bg-white px-4 py-3 shadow-sm">
             <div className="max-w-6xl mx-auto flex flex-col gap-3 text-sm font-medium text-gray-700">
-              <a href="#inicio" onClick={() => setMenuAberto(false)} className="hover:text-pink-600">
+              <a
+                href="#inicio"
+                onClick={() => setMenuAberto(false)}
+                className="hover:text-pink-600"
+              >
                 🏠 Início
               </a>
-              <a href="#produtos" onClick={() => setMenuAberto(false)} className="hover:text-pink-600">
+              <a
+                href="#produtos"
+                onClick={() => setMenuAberto(false)}
+                className="hover:text-pink-600"
+              >
                 📦 Produtos
               </a>
-              <a href="#sobre" onClick={() => setMenuAberto(false)} className="hover:text-pink-600">
+              <a
+                href="#sobre"
+                onClick={() => setMenuAberto(false)}
+                className="hover:text-pink-600"
+              >
                 📜 Sobre nós
               </a>
               <a
                 href="https://wa.me/5599999999999?text=Oi%2C%20quero%20tirar%20uma%20d%C3%BAvida%20sobre%20os%20produtos"
                 target="_blank"
+                rel="noreferrer"
                 onClick={() => setMenuAberto(false)}
                 className="hover:text-pink-600"
               >
                 💬 Suporte no WhatsApp
               </a>
-              <a href="#como-funciona" onClick={() => setMenuAberto(false)} className="hover:text-pink-600">
+              <a
+                href="#como-funciona"
+                onClick={() => setMenuAberto(false)}
+                className="hover:text-pink-600"
+              >
                 💰 Como funciona
               </a>
-              <a href="https://instagram.com" target="_blank" onClick={() => setMenuAberto(false)} className="hover:text-pink-600">
+              <a
+                href="https://instagram.com"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => setMenuAberto(false)}
+                className="hover:text-pink-600"
+              >
                 📸 Instagram
               </a>
-              <a href="https://tiktok.com" target="_blank" onClick={() => setMenuAberto(false)} className="hover:text-pink-600">
+              <a
+                href="https://tiktok.com"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => setMenuAberto(false)}
+                className="hover:text-pink-600"
+              >
                 📱 TikTok
               </a>
             </div>
@@ -259,40 +415,59 @@ export default function Home() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filtrados.map((p) => {
             const whatsappMsg = `Oi, tenho interesse no ${p.nome}`
+            const disponivel = produtoDisponivel(p.nome)
+            const esgotado = !disponivel
 
             return (
               <div
                 key={p.id}
-                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition overflow-hidden border border-pink-100"
+                className={`bg-white rounded-2xl shadow-md hover:shadow-xl transition overflow-hidden border border-pink-100 ${
+                  esgotado ? "opacity-80" : ""
+                }`}
               >
-                <Link href={`/produto/${p.id}`} className="block">
-                  <img
-                    src={p.imagem}
-                    alt={p.nome}
-                    className="w-full h-36 object-cover hover:scale-105 transition duration-300"
-                  />
+                <div className="relative">
+                  {esgotado && (
+                    <div className="absolute top-3 left-3 z-10 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+                      ESGOTADO
+                    </div>
+                  )}
 
-                  <div className="p-3">
-                    <h3 className="text-sm font-bold text-gray-800 line-clamp-1">
-                      {p.nome}
-                    </h3>
+                  <Link href={`/produto/${p.id}`} className="block">
+                    <img
+                      src={p.imagem}
+                      alt={p.nome}
+                      className={`w-full h-36 object-cover transition duration-300 ${
+                        esgotado ? "grayscale" : "hover:scale-105"
+                      }`}
+                    />
 
-                    <p className="font-extrabold text-pink-600 text-lg mt-1">
-                      R$ {p.preco}
-                    </p>
+                    <div className="p-3">
+                      <h3 className="text-sm font-bold text-gray-800 line-clamp-1">
+                        {p.nome}
+                      </h3>
 
-                    <p className="text-xs text-gray-500 mt-2 line-clamp-2">
-                      {p.descricao}
-                    </p>
-                  </div>
-                </Link>
+                      <p className="font-extrabold text-pink-600 text-lg mt-1">
+                        R$ {p.preco}
+                      </p>
+
+                      <p className="text-xs text-gray-500 mt-2 line-clamp-2">
+                        {p.descricao}
+                      </p>
+                    </div>
+                  </Link>
+                </div>
 
                 <div className="px-3 pb-3 flex flex-col gap-2">
                   <button
-                    onClick={() => adicionar(p.id)}
-                    className="w-full bg-pink-500 text-white py-2 rounded-xl text-sm font-semibold hover:bg-pink-600 transition"
+                    onClick={() => adicionar(p.id, p.nome)}
+                    disabled={esgotado}
+                    className={`w-full py-2 rounded-xl text-sm font-semibold transition ${
+                      esgotado
+                        ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                        : "bg-pink-500 text-white hover:bg-pink-600"
+                    }`}
                   >
-                    Adicionar ao carrinho
+                    {esgotado ? "Indisponível" : "Adicionar ao carrinho"}
                   </button>
 
                   <a
@@ -300,6 +475,7 @@ export default function Home() {
                       whatsappMsg
                     )}`}
                     target="_blank"
+                    rel="noreferrer"
                     className="w-full border border-green-500 text-green-600 py-2 rounded-xl text-sm font-semibold text-center hover:bg-green-50 transition"
                   >
                     Tirar dúvida
@@ -365,6 +541,7 @@ export default function Home() {
               <a
                 href="https://wa.me/5599999999999?text=Oi%2C%20quero%20falar%20com%20o%20suporte"
                 target="_blank"
+                rel="noreferrer"
                 className="bg-green-500 text-white py-3 rounded-xl text-center font-semibold hover:bg-green-600 transition"
               >
                 Falar no WhatsApp
@@ -373,6 +550,7 @@ export default function Home() {
               <a
                 href="https://instagram.com"
                 target="_blank"
+                rel="noreferrer"
                 className="border border-pink-300 text-pink-600 py-3 rounded-xl text-center font-semibold hover:bg-pink-50 transition"
               >
                 Instagram
@@ -381,6 +559,7 @@ export default function Home() {
               <a
                 href="https://tiktok.com"
                 target="_blank"
+                rel="noreferrer"
                 className="border border-pink-300 text-pink-600 py-3 rounded-xl text-center font-semibold hover:bg-pink-50 transition"
               >
                 TikTok
@@ -393,6 +572,7 @@ export default function Home() {
       <a
         href="https://wa.me/5599999999999?text=Oi%2C%20quero%20tirar%20uma%20d%C3%BAvida"
         target="_blank"
+        rel="noreferrer"
         className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-full shadow-xl z-50 hover:scale-110 transition"
       >
         <MessageCircle size={24} />

@@ -20,6 +20,22 @@ type DadosItem = {
   anonimo: boolean
 }
 
+type EstoqueItem = {
+  produto: string
+  disponivel: boolean
+  esgotado: boolean
+}
+
+type EstoquePorProduto = Record<string, EstoqueItem>
+
+function normalizarNomeProduto(nome: string) {
+  return String(nome || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+}
+
 export default function CartPage() {
   const router = useRouter()
 
@@ -27,6 +43,8 @@ export default function CartPage() {
   const [dados, setDados] = useState<Record<number, DadosItem[]>>({})
   const [whats, setWhats] = useState("")
   const [carregando, setCarregando] = useState(false)
+  const [estoquePorProduto, setEstoquePorProduto] = useState<EstoquePorProduto>({})
+  const [carregandoEstoque, setCarregandoEstoque] = useState(true)
 
   const produtos: Produto[] = [
     { id: 1, nome: "Produto 1", preco: 1, imagem: "/p1.jpg" },
@@ -60,6 +78,72 @@ export default function CartPage() {
     "3 Seg. Trabalho",
   ]
 
+  function produtoDisponivel(nomeProduto: string, estoqueAtual?: EstoquePorProduto) {
+    const mapa = estoqueAtual || estoquePorProduto
+    const chave = normalizarNomeProduto(nomeProduto)
+    const item = mapa[chave]
+
+    if (carregandoEstoque && !estoqueAtual) return true
+    if (!item) return true
+
+    return Boolean(item.disponivel)
+  }
+
+  function removerProdutosEsgotados(estoqueAtual: EstoquePorProduto) {
+    setCarrinho((prev) => {
+      const novoCarrinho = { ...prev }
+      let alterou = false
+
+      for (const produto of produtos) {
+        if (!produtoDisponivel(produto.nome, estoqueAtual) && novoCarrinho[produto.id]) {
+          delete novoCarrinho[produto.id]
+          alterou = true
+        }
+      }
+
+      return alterou ? novoCarrinho : prev
+    })
+
+    setDados((prev) => {
+      const novoDados = { ...prev }
+      let alterou = false
+
+      for (const produto of produtos) {
+        if (!produtoDisponivel(produto.nome, estoqueAtual) && novoDados[produto.id]) {
+          delete novoDados[produto.id]
+          alterou = true
+        }
+      }
+
+      return alterou ? novoDados : prev
+    })
+  }
+
+  async function carregarEstoque() {
+    try {
+      setCarregandoEstoque(true)
+
+      const response = await fetch("/api/estoque", {
+        method: "GET",
+        cache: "no-store",
+      })
+
+      const data = await response.json()
+
+      if (data?.ok && data?.estoquePorProduto) {
+        setEstoquePorProduto(data.estoquePorProduto)
+        removerProdutosEsgotados(data.estoquePorProduto)
+      } else {
+        setEstoquePorProduto({})
+      }
+    } catch (error) {
+      console.error("Erro ao buscar estoque:", error)
+      setEstoquePorProduto({})
+    } finally {
+      setCarregandoEstoque(false)
+    }
+  }
+
   useEffect(() => {
     const carrinhoSalvo = JSON.parse(localStorage.getItem("carrinho") || "{}")
     const dadosSalvos = JSON.parse(localStorage.getItem("carrinhoDados") || "{}")
@@ -68,6 +152,20 @@ export default function CartPage() {
     setCarrinho(carrinhoSalvo)
     setDados(dadosSalvos)
     setWhats(whatsSalvo)
+  }, [])
+
+  useEffect(() => {
+    carregarEstoque()
+
+    const aoFocar = () => {
+      carregarEstoque()
+    }
+
+    window.addEventListener("focus", aoFocar)
+
+    return () => {
+      window.removeEventListener("focus", aoFocar)
+    }
   }, [])
 
   useEffect(() => {
@@ -83,12 +181,17 @@ export default function CartPage() {
   }, [whats])
 
   const itensNoCarrinho = useMemo(() => {
-    return produtos.filter((produto) => (carrinho[produto.id] || 0) > 0)
-  }, [carrinho])
+    return produtos.filter((produto) => {
+      const quantidade = carrinho[produto.id] || 0
+      return quantidade > 0 && produtoDisponivel(produto.nome)
+    })
+  }, [carrinho, estoquePorProduto, carregandoEstoque])
 
   const totalItens = useMemo(() => {
-    return Object.values(carrinho).reduce((acc, qtd) => acc + qtd, 0)
-  }, [carrinho])
+    return itensNoCarrinho.reduce((acc, produto) => {
+      return acc + (carrinho[produto.id] || 0)
+    }, 0)
+  }, [itensNoCarrinho, carrinho])
 
   const totalPreco = useMemo(() => {
     return itensNoCarrinho.reduce((acc, produto) => {
@@ -105,6 +208,14 @@ export default function CartPage() {
   }
 
   function alterarQuantidade(id: number, delta: number) {
+    const produto = produtos.find((p) => p.id === id)
+
+    if (!produto) return
+
+    if (delta > 0 && !produtoDisponivel(produto.nome)) {
+      return
+    }
+
     setCarrinho((prev) => {
       const atual = prev[id] || 0
       const novaQtd = atual + delta
@@ -191,6 +302,18 @@ export default function CartPage() {
 
   async function finalizarPedido() {
     try {
+      await carregarEstoque()
+
+      const itensAtualizados = produtos.filter((produto) => {
+        const quantidade = carrinho[produto.id] || 0
+        return quantidade > 0 && produtoDisponivel(produto.nome)
+      })
+
+      if (itensAtualizados.length === 0) {
+        alert("Seu carrinho está vazio ou os produtos ficaram esgotados")
+        return
+      }
+
       const numeroLimpo = whats.replace(/\D/g, "")
 
       if (!numeroLimpo || numeroLimpo.length < 10) {
@@ -198,14 +321,14 @@ export default function CartPage() {
         return
       }
 
-      if (itensNoCarrinho.length === 0) {
-        alert("Seu carrinho está vazio")
-        return
-      }
-
       const pedido: any[] = []
 
-      for (const produto of itensNoCarrinho) {
+      for (const produto of itensAtualizados) {
+        if (!produtoDisponivel(produto.nome)) {
+          alert(`O produto ${produto.nome} ficou esgotado e foi removido do carrinho`)
+          return
+        }
+
         const quantidade = carrinho[produto.id] || 0
         const listaDados = dados[produto.id] || []
 
@@ -279,6 +402,10 @@ export default function CartPage() {
         return
       }
 
+      if (pag.referencia) {
+        localStorage.setItem("referenciaPagamentoAtual", pag.referencia)
+      }
+
       window.location.href = pag.init_point
     } catch (error) {
       console.error("Erro no catch:", error)
@@ -328,6 +455,7 @@ export default function CartPage() {
           <div className="space-y-6">
             {itensNoCarrinho.map((produto) => {
               const quantidade = carrinho[produto.id] || 0
+              const esgotado = !produtoDisponivel(produto.nome)
 
               return (
                 <section
@@ -340,7 +468,9 @@ export default function CartPage() {
                         <img
                           src={produto.imagem}
                           alt={produto.nome}
-                          className="h-20 w-20 rounded-xl object-cover"
+                          className={`h-20 w-20 rounded-xl object-cover ${
+                            esgotado ? "grayscale opacity-70" : ""
+                          }`}
                         />
                       ) : null}
 
@@ -351,6 +481,11 @@ export default function CartPage() {
                         <p className="text-sm text-gray-600">
                           R$ {produto.preco.toFixed(2)}
                         </p>
+                        {esgotado && (
+                          <p className="mt-1 text-sm font-semibold text-red-500">
+                            ESGOTADO
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -370,7 +505,12 @@ export default function CartPage() {
                       <button
                         type="button"
                         onClick={() => alterarQuantidade(produto.id, 1)}
-                        className="h-10 w-10 rounded-full bg-pink-600 text-xl font-bold text-white"
+                        disabled={esgotado}
+                        className={`h-10 w-10 rounded-full text-xl font-bold ${
+                          esgotado
+                            ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                            : "bg-pink-600 text-white"
+                        }`}
                       >
                         +
                       </button>
