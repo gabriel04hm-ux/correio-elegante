@@ -1,9 +1,25 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
 import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, ShoppingCart, MessageCircle } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { ArrowLeft, ShoppingCart } from "lucide-react"
+import { useRouter } from "next/navigation"
+
+type Produto = {
+  id: number
+  nome: string
+  preco: number
+  imagem?: string
+}
+
+type DadosItem = {
+  mensagem: string
+  remetente: string
+  nome: string
+  sala: string
+  anonimo: boolean
+  cpf: string
+}
 
 type EstoqueItem = {
   produto: string
@@ -21,140 +37,94 @@ function normalizarNomeProduto(nome: string) {
     .toLowerCase()
 }
 
-export default function ProdutoPage() {
-  const params = useParams()
+export default function CartPage() {
   const router = useRouter()
 
-  const [animar, setAnimar] = useState(false)
-  const [totalItens, setTotalItens] = useState(0)
+  const [carrinho, setCarrinho] = useState<Record<number, number>>({})
+  const [dados, setDados] = useState<Record<number, DadosItem[]>>({})
+  const [whats, setWhats] = useState("")
+  const [carregando, setCarregando] = useState(false)
   const [estoquePorProduto, setEstoquePorProduto] = useState<EstoquePorProduto>({})
   const [carregandoEstoque, setCarregandoEstoque] = useState(true)
 
-  const produtos = [
-    {
-      id: 1,
-      nome: "Coração",
-      preco: 0.5,
-      imagem: "/p1.jpg",
-      descricao:
-        "Um gesto simples e cheio de carinho para surpreender alguém especial.",
-    },
-    {
-      id: 2,
-      nome: "Bala c/ coração",
-      preco: 0.75,
-      imagem: "/p2.jpg",
-      descricao:
-        "Um mimo doce com uma mensagem especial para alegrar o dia.",
-    },
-    {
-      id: 3,
-      nome: "Pirulito c/ coração",
-      preco: 1,
-      imagem: "/p3.jpg",
-      descricao:
-        "Uma forma divertida e doce de demonstrar carinho.",
-    },
-    {
-      id: 4,
-      nome: "Bombom c/ coração",
-      preco: 3.5,
-      imagem: "/p4.jpg",
-      descricao:
-        "Perfeito para surpreender com algo mais especial e saboroso.",
-    },
-    {
-      id: 5,
-      nome: "Fini c/ coração",
-      preco: 2.5,
-      imagem: "/p5.jpg",
-      descricao:
-        "Uma opção divertida e colorida para presentear.",
-    },
-    {
-      id: 6,
-      nome: "Polaroide c/ coração",
-      preco: 4,
-      imagem: "/p1.jpg",
-      descricao:
-        "Inclui uma foto especial para tornar o momento inesquecível.",
-    },
-    {
-      id: 7,
-      nome: "Flor c/ coração",
-      preco: 12,
-      imagem: "/p2.jpg",
-      descricao:
-        "Um presente completo, delicado e cheio de significado.",
-    },
-    {
-      id: 8,
-      nome: "Ingresso Dia D",
-      preco: 3,
-      imagem: "/p3.jpg",
-      descricao:
-        "Ingresso especial para o Dia D. Basta preencher nome completo, sala e CPF.",
-    },
+  const produtos: Produto[] = [
+    { id: 1, nome: "Coração", preco: 0.5, imagem: "/p1.jpg" },
+    { id: 2, nome: "Bala c/ coração", preco: 0.75, imagem: "/p2.jpg" },
+    { id: 3, nome: "Pirulito c/ coração", preco: 1, imagem: "/p3.jpg" },
+    { id: 4, nome: "Bombom c/ coração", preco: 3.5, imagem: "/p4.jpg" },
+    { id: 5, nome: "Fini c/ coração", preco: 2.5, imagem: "/p5.jpg" },
+    { id: 6, nome: "Polaroide c/ coração", preco: 4, imagem: "/p1.jpg" },
+    { id: 7, nome: "Flor c/ coração", preco: 12, imagem: "/p2.jpg" },
+    { id: 8, nome: "Ingresso Dia D", preco: 3, imagem: "/p3.jpg" },
   ]
 
-  const produtoId = Number(params.id)
-  const produto = useMemo(
-    () => produtos.find((p) => p.id === produtoId),
-    [produtoId]
-  )
+  const salas = [
+    "1 Eletrônica",
+    "1 Ene. Renovável",
+    "1 Fab. Mecânica",
+    "1 Informática",
+    "1 Logística",
+    "1 Seg. Trabalho",
 
-  const outrosProdutos = produtos.filter((p) => p.id !== produtoId)
+    "2 Eletrônica",
+    "2 Ene. Renovável",
+    "2 Fab. Mecânica",
+    "2 Informática",
+    "2 Logística",
+    "2 Seg. Trabalho",
 
-  function atualizarCarrinho() {
-    const carrinho: Record<string, number> = JSON.parse(
-      localStorage.getItem("carrinho") || "{}"
-    )
+    "3 Eletrônica",
+    "3 Informática",
+    "3 Logística",
+    "3 Propedêutico",
+    "3 Seg. Trabalho",
 
-    const total = Object.values(carrinho).reduce(
-      (acc, qtd) => acc + Number(qtd),
-      0
-    )
+    "Professor(a)",
+  ]
 
-    setTotalItens(total)
+  function isIngressoDiaD(produto: Produto) {
+    return produto.nome === "Ingresso Dia D"
   }
 
-  function removerProdutosEsgotadosDoCarrinho(estoque: EstoquePorProduto) {
-    const carrinhoAtual: Record<string, number> = JSON.parse(
-      localStorage.getItem("carrinho") || "{}"
-    )
+  function produtoDisponivel(nomeProduto: string, estoqueAtual?: EstoquePorProduto) {
+    const mapa = estoqueAtual || estoquePorProduto
+    const chave = normalizarNomeProduto(nomeProduto)
+    const item = mapa[chave]
 
-    const carrinhoDadosAtual: Record<string, any[]> = JSON.parse(
-      localStorage.getItem("carrinhoDados") || "{}"
-    )
+    if (carregandoEstoque && !estoqueAtual) return true
+    if (!item) return true
 
-    let houveAlteracao = false
-    const novoCarrinho: Record<string, number> = { ...carrinhoAtual }
-    const novoCarrinhoDados: Record<string, any[]> = { ...carrinhoDadosAtual }
+    return Boolean(item.disponivel)
+  }
 
-    for (const item of produtos) {
-      const chaveEstoque = normalizarNomeProduto(item.nome)
-      const itemEstoque = estoque[chaveEstoque]
+  function removerProdutosEsgotados(estoqueAtual: EstoquePorProduto) {
+    setCarrinho((prev) => {
+      const novoCarrinho = { ...prev }
+      let alterou = false
 
-      if (itemEstoque && !itemEstoque.disponivel) {
-        const id = String(item.id)
-
-        if (novoCarrinho[id]) {
-          delete novoCarrinho[id]
-          houveAlteracao = true
-        }
-
-        if (novoCarrinhoDados[id]) {
-          delete novoCarrinhoDados[id]
-          houveAlteracao = true
+      for (const produto of produtos) {
+        if (!produtoDisponivel(produto.nome, estoqueAtual) && novoCarrinho[produto.id]) {
+          delete novoCarrinho[produto.id]
+          alterou = true
         }
       }
-    }
 
-    if (houveAlteracao) {
-      localStorage.setItem("carrinho", JSON.stringify(novoCarrinho))
-      localStorage.setItem("carrinhoDados", JSON.stringify(novoCarrinhoDados))
-      atualizarCarrinho()
-    }
+      return alterou ? novoCarrinho : prev
+    })
+
+    setDados((prev) => {
+      const novoDados = { ...prev }
+      let alterou = false
+
+      for (const produto of produtos) {
+        if (!produtoDisponivel(produto.nome, estoqueAtual) && novoDados[produto.id]) {
+          delete novoDados[produto.id]
+          alterou = true
+        }
+      }
+
+      return alterou ? novoDados : prev
+    })
   }
 
   async function carregarEstoque() {
@@ -170,7 +140,7 @@ export default function ProdutoPage() {
 
       if (data?.ok && data?.estoquePorProduto) {
         setEstoquePorProduto(data.estoquePorProduto)
-        removerProdutosEsgotadosDoCarrinho(data.estoquePorProduto)
+        removerProdutosEsgotados(data.estoquePorProduto)
       } else {
         setEstoquePorProduto({})
       }
@@ -183,11 +153,19 @@ export default function ProdutoPage() {
   }
 
   useEffect(() => {
-    atualizarCarrinho()
+    const carrinhoSalvo = JSON.parse(localStorage.getItem("carrinho") || "{}")
+    const dadosSalvos = JSON.parse(localStorage.getItem("carrinhoDados") || "{}")
+    const whatsSalvo = localStorage.getItem("carrinhoWhats") || ""
+
+    setCarrinho(carrinhoSalvo)
+    setDados(dadosSalvos)
+    setWhats(whatsSalvo)
+  }, [])
+
+  useEffect(() => {
     carregarEstoque()
 
     const aoFocar = () => {
-      atualizarCarrinho()
       carregarEstoque()
     }
 
@@ -198,77 +176,289 @@ export default function ProdutoPage() {
     }
   }, [])
 
-  function produtoDisponivel(nomeProduto: string) {
-    const chave = normalizarNomeProduto(nomeProduto)
-    const item = estoquePorProduto[chave]
+  useEffect(() => {
+    localStorage.setItem("carrinho", JSON.stringify(carrinho))
+  }, [carrinho])
 
-    if (carregandoEstoque) return true
-    if (!item) return true
+  useEffect(() => {
+    localStorage.setItem("carrinhoDados", JSON.stringify(dados))
+  }, [dados])
 
-    return Boolean(item.disponivel)
+  useEffect(() => {
+    localStorage.setItem("carrinhoWhats", whats)
+  }, [whats])
+
+  const itensNoCarrinho = useMemo(() => {
+    return produtos.filter((produto) => {
+      const quantidade = carrinho[produto.id] || 0
+      return quantidade > 0 && produtoDisponivel(produto.nome)
+    })
+  }, [carrinho, estoquePorProduto, carregandoEstoque])
+
+  const totalItens = useMemo(() => {
+    return itensNoCarrinho.reduce((acc, produto) => {
+      return acc + (carrinho[produto.id] || 0)
+    }, 0)
+  }, [itensNoCarrinho, carrinho])
+
+  const totalPreco = useMemo(() => {
+    return itensNoCarrinho.reduce((acc, produto) => {
+      return acc + produto.preco * (carrinho[produto.id] || 0)
+    }, 0)
+  }, [itensNoCarrinho, carrinho])
+
+  function formatarWhats(v: string) {
+    const n = v.replace(/\D/g, "").slice(0, 11)
+
+    if (n.length <= 2) return n
+    if (n.length <= 7) return `(${n.slice(0, 2)}) ${n.slice(2)}`
+    return `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`
   }
 
-  function adicionar(id: number, nomeProduto: string) {
-    if (!produtoDisponivel(nomeProduto)) {
+  function formatarCPF(v: string) {
+    const n = v.replace(/\D/g, "").slice(0, 11)
+
+    if (n.length <= 3) return n
+    if (n.length <= 6) return `${n.slice(0, 3)}.${n.slice(3)}`
+    if (n.length <= 9) return `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6)}`
+    return `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6, 9)}-${n.slice(9)}`
+  }
+
+  function alterarQuantidade(id: number, delta: number) {
+    const produto = produtos.find((p) => p.id === id)
+
+    if (!produto) return
+
+    if (delta > 0 && !produtoDisponivel(produto.nome)) {
       return
     }
 
-    const carrinhoAtual: Record<string, number> = JSON.parse(
-      localStorage.getItem("carrinho") || "{}"
-    )
+    setCarrinho((prev) => {
+      const atual = prev[id] || 0
+      const novaQtd = atual + delta
+      const novoCarrinho = { ...prev }
 
-    const quantidade = carrinhoAtual[id] || 0
+      if (novaQtd <= 0) {
+        delete novoCarrinho[id]
+      } else {
+        novoCarrinho[id] = novaQtd
+      }
 
-    const novoCarrinho = {
-      ...carrinhoAtual,
-      [id]: quantidade + 1,
+      return novoCarrinho
+    })
+
+    setDados((prev) => {
+      const qtdAtual = carrinho[id] || 0
+      const novaQtd = qtdAtual + delta
+      const listaAtual = prev[id] || []
+      const novo = { ...prev }
+
+      if (novaQtd <= 0) {
+        delete novo[id]
+        return novo
+      }
+
+      if (delta > 0) {
+        const novosItens = [...listaAtual]
+        while (novosItens.length < novaQtd) {
+          novosItens.push({
+            mensagem: "",
+            remetente: "",
+            nome: "",
+            sala: "",
+            anonimo: false,
+            cpf: "",
+          })
+        }
+        novo[id] = novosItens
+      } else {
+        novo[id] = listaAtual.slice(0, novaQtd)
+      }
+
+      return novo
+    })
+  }
+
+  function atualizarCampo(
+    produtoId: number,
+    index: number,
+    campo: keyof DadosItem,
+    valor: string | boolean
+  ) {
+    setDados((prev) => {
+      const copia = { ...prev }
+      const lista = [...(copia[produtoId] || [])]
+
+      while (lista.length <= index) {
+        lista.push({
+          mensagem: "",
+          remetente: "",
+          nome: "",
+          sala: "",
+          anonimo: false,
+          cpf: "",
+        })
+      }
+
+      lista[index] = {
+        ...lista[index],
+        [campo]: valor,
+      }
+
+      copia[produtoId] = lista
+      return copia
+    })
+  }
+
+  function limparCarrinhoCompleto() {
+    setCarrinho({})
+    setDados({})
+    setWhats("")
+    localStorage.removeItem("carrinho")
+    localStorage.removeItem("carrinhoDados")
+    localStorage.removeItem("carrinhoWhats")
+  }
+
+  async function finalizarPedido() {
+    try {
+      await carregarEstoque()
+
+      const itensAtualizados = produtos.filter((produto) => {
+        const quantidade = carrinho[produto.id] || 0
+        return quantidade > 0 && produtoDisponivel(produto.nome)
+      })
+
+      if (itensAtualizados.length === 0) {
+        alert("Seu carrinho está vazio ou os produtos ficaram esgotados")
+        return
+      }
+
+      const numeroLimpo = whats.replace(/\D/g, "")
+
+      if (!numeroLimpo || numeroLimpo.length < 10) {
+        alert("Digite um WhatsApp válido")
+        return
+      }
+
+      const pedido: any[] = []
+
+      for (const produto of itensAtualizados) {
+        if (!produtoDisponivel(produto.nome)) {
+          alert(`O produto ${produto.nome} ficou esgotado e foi removido do carrinho`)
+          return
+        }
+
+        const quantidade = carrinho[produto.id] || 0
+        const listaDados = dados[produto.id] || []
+
+        for (let i = 0; i < quantidade; i++) {
+          const item = listaDados[i]
+
+          if (!item?.nome?.trim()) {
+            alert(`Preencha o nome do item ${i + 1} de ${produto.nome}`)
+            return
+          }
+
+          if (!item?.sala?.trim()) {
+            alert(`Selecione a sala do item ${i + 1} de ${produto.nome}`)
+            return
+          }
+
+          if (isIngressoDiaD(produto)) {
+            const cpfLimpo = String(item?.cpf || "").replace(/\D/g, "")
+
+            if (cpfLimpo.length !== 11) {
+              alert(`Digite um CPF válido para o item ${i + 1} de ${produto.nome}`)
+              return
+            }
+
+            pedido.push({
+              produto: produto.nome,
+              mensagem: `CPF: ${formatarCPF(cpfLimpo)}`,
+              remetente: "",
+              destinatario: item.nome.trim(),
+              sala: item.sala.trim(),
+              whatsapp: numeroLimpo,
+            })
+
+            continue
+          }
+
+          pedido.push({
+            produto: produto.nome,
+            mensagem: item.mensagem?.trim() || "",
+            remetente: item.anonimo ? "Anônimo" : item.remetente?.trim() || "",
+            destinatario: item.nome.trim(),
+            sala: item.sala.trim(),
+            whatsapp: numeroLimpo,
+          })
+        }
+      }
+
+      setCarregando(true)
+
+      const pagamento = await fetch("/api/pedido/pagamento", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          itens: [
+            {
+              id: "1",
+              title: "Pedido Correio Elegante",
+              quantity: 1,
+              unit_price: totalPreco,
+            },
+          ],
+          pedido,
+        }),
+      })
+
+      const textoPagamento = await pagamento.text()
+      console.log("Status /api/pedido/pagamento:", pagamento.status)
+      console.log("Resposta /api/pedido/pagamento:", textoPagamento)
+
+      if (!pagamento.ok) {
+        console.error("Erro ao gerar pagamento:", textoPagamento)
+        alert(`Erro ao gerar pagamento: ${textoPagamento}`)
+        return
+      }
+
+      let pag: any
+
+      try {
+        pag = JSON.parse(textoPagamento)
+      } catch {
+        console.error("Resposta inválida da API /api/pedido/pagamento:", textoPagamento)
+        alert("A API de pagamento não retornou JSON válido")
+        return
+      }
+
+      if (!pag.init_point) {
+        console.error("init_point não encontrado:", pag)
+        alert("O link de pagamento não foi retornado")
+        return
+      }
+
+      if (pag.referencia) {
+        localStorage.setItem("referenciaPagamentoAtual", pag.referencia)
+      }
+
+      window.location.href = pag.init_point
+    } catch (error) {
+      console.error("Erro no catch:", error)
+      alert("Erro inesperado ao finalizar pedido")
+    } finally {
+      setCarregando(false)
     }
-
-    localStorage.setItem("carrinho", JSON.stringify(novoCarrinho))
-    setTotalItens((prev) => prev + 1)
-
-    setAnimar(true)
-    setTimeout(() => setAnimar(false), 300)
   }
-
-  if (!produto) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-pink-50 via-rose-50 to-white text-black">
-        <div className="max-w-5xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => router.back()}
-              className="p-2 rounded-full bg-white shadow border border-pink-100"
-            >
-              <ArrowLeft size={22} className="text-pink-600" />
-            </button>
-
-            <Link href="/cart" className="relative">
-              <ShoppingCart size={26} className="text-pink-600" />
-            </Link>
-          </div>
-
-          <div className="mt-10 bg-white rounded-3xl shadow-md p-8 text-center">
-            <h1 className="text-2xl font-bold text-gray-800">
-              Produto não encontrado
-            </h1>
-            <p className="text-gray-500 mt-2">
-              Esse produto não existe ou foi removido.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  const whatsappMsg = `Oi, tenho interesse no ${produto.nome}`
-  const produtoEsgotado = !produtoDisponivel(produto.nome)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-50 via-rose-50 to-white text-black">
-      <div className="max-w-5xl mx-auto px-4 py-4">
-        <div className="sticky top-0 z-40 bg-pink-50/90 backdrop-blur rounded-2xl">
-          <div className="flex items-center justify-between px-1 py-2">
+    <main className="min-h-screen bg-gradient-to-b from-pink-50 via-rose-50 to-white p-4 md:p-8 text-black">
+      <div className="mx-auto max-w-5xl">
+        <div className="sticky top-0 z-40 mb-6 rounded-2xl bg-pink-50/90 backdrop-blur">
+          <div className="flex items-center justify-between gap-4 px-1 py-2">
             <button
               onClick={() => router.back()}
               className="p-2 rounded-full bg-white shadow border border-pink-100 hover:bg-pink-50 transition"
@@ -276,160 +466,352 @@ export default function ProdutoPage() {
               <ArrowLeft size={22} className="text-pink-600" />
             </button>
 
-            <Link href="/cart" className="relative">
-              <ShoppingCart
-                size={28}
-                className={`text-pink-600 transition duration-300 ${
-                  animar ? "scale-125" : "scale-100"
-                }`}
-              />
+            <h1 className="text-2xl font-bold text-pink-700">Carrinho</h1>
 
-              {totalItens > 0 && (
-                <span className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs min-w-[20px] h-5 px-1 flex items-center justify-center rounded-full font-bold">
-                  {totalItens}
-                </span>
-              )}
+            <Link
+              href="/cart"
+              className="p-2 rounded-full bg-white shadow border border-pink-100"
+            >
+              <ShoppingCart size={22} className="text-pink-600" />
             </Link>
           </div>
         </div>
 
-        <div className="mt-3 bg-white rounded-3xl shadow-lg overflow-hidden border border-pink-100">
-          <div className="relative">
-            {produtoEsgotado && (
-              <div className="absolute top-4 left-4 z-10 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
-                ESGOTADO
-              </div>
-            )}
-
-            <img
-              src={produto.imagem}
-              alt={produto.nome}
-              className={`w-full h-72 sm:h-96 object-cover ${
-                produtoEsgotado ? "grayscale" : ""
-              }`}
-            />
-          </div>
-
-          <div className="p-5 sm:p-6">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-800">
-              {produto.nome}
-            </h1>
-
-            <p className="text-pink-600 font-extrabold text-2xl mt-2">
-              R$ {produto.preco.toFixed(2)}
+        {itensNoCarrinho.length === 0 ? (
+          <div className="rounded-2xl bg-white p-8 text-center shadow">
+            <p className="text-lg font-medium text-gray-700">
+              Seu carrinho está vazio.
             </p>
 
-            <p className="text-gray-600 mt-4 leading-relaxed">
-              {produto.descricao}
-            </p>
-
-            <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => adicionar(produto.id, produto.nome)}
-                disabled={produtoEsgotado}
-                className={`flex-1 py-3 rounded-2xl font-semibold transition ${
-                  produtoEsgotado
-                    ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                    : "bg-pink-500 text-white hover:bg-pink-600"
-                }`}
-              >
-                {produtoEsgotado ? "Indisponível" : "Adicionar ao carrinho"}
-              </button>
-
-              <a
-                href={`https://wa.me/5599999999999?text=${encodeURIComponent(
-                  whatsappMsg
-                )}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 border border-green-500 text-green-600 py-3 rounded-2xl font-semibold text-center hover:bg-green-50 transition flex items-center justify-center gap-2"
-              >
-                <MessageCircle size={18} />
-                Falar no WhatsApp
-              </a>
-            </div>
+            <Link
+              href="/"
+              className="mt-4 inline-block rounded-xl bg-pink-600 px-5 py-3 font-semibold text-white"
+            >
+              Escolher produtos
+            </Link>
           </div>
-        </div>
-
-        <div className="mt-8">
-          <div className="flex items-end justify-between mb-4">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-extrabold text-gray-800">
-                Outros produtos
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Aproveite e adicione mais itens ao carrinho
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {outrosProdutos.map((item) => {
-              const esgotado = !produtoDisponivel(item.nome)
+        ) : (
+          <div className="space-y-6">
+            {itensNoCarrinho.map((produto) => {
+              const quantidade = carrinho[produto.id] || 0
+              const esgotado = !produtoDisponivel(produto.nome)
+              const produtoEhIngresso = isIngressoDiaD(produto)
 
               return (
-                <div
-                  key={item.id}
-                  className={`bg-white rounded-2xl shadow-md border border-pink-100 overflow-hidden ${
-                    esgotado ? "opacity-80" : ""
-                  }`}
+                <section
+                  key={produto.id}
+                  className="rounded-2xl bg-white p-5 shadow"
                 >
-                  <div className="relative">
-                    {esgotado && (
-                      <div className="absolute top-2 left-2 z-10 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow">
-                        ESGOTADO
-                      </div>
-                    )}
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-center gap-4">
+                      {produto.imagem ? (
+                        <img
+                          src={produto.imagem}
+                          alt={produto.nome}
+                          className={`h-20 w-20 rounded-xl object-cover ${
+                            esgotado ? "grayscale opacity-70" : ""
+                          }`}
+                        />
+                      ) : null}
 
-                    <Link href={`/produto/${item.id}`} className="block">
-                      <img
-                        src={item.imagem}
-                        alt={item.nome}
-                        className={`w-full h-24 sm:h-28 object-cover transition duration-300 ${
-                          esgotado ? "grayscale" : "hover:scale-105"
-                        }`}
-                      />
-
-                      <div className="p-3">
-                        <h3 className="text-sm font-bold text-gray-800 line-clamp-1">
-                          {item.nome}
-                        </h3>
-
-                        <p className="text-pink-600 font-extrabold mt-1">
-                          R$ {item.preco.toFixed(2)}
+                      <div>
+                        <h2 className="text-lg font-bold text-gray-800">
+                          {produto.nome}
+                        </h2>
+                        <p className="text-sm text-gray-600">
+                          R$ {produto.preco.toFixed(2)}
                         </p>
+                        {esgotado && (
+                          <p className="mt-1 text-sm font-semibold text-red-500">
+                            ESGOTADO
+                          </p>
+                        )}
                       </div>
-                    </Link>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => alterarQuantidade(produto.id, -1)}
+                        className="h-10 w-10 rounded-full bg-pink-100 text-xl font-bold text-pink-700"
+                      >
+                        -
+                      </button>
+
+                      <span className="min-w-[24px] text-center text-lg font-semibold">
+                        {quantidade}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => alterarQuantidade(produto.id, 1)}
+                        disabled={esgotado}
+                        className={`h-10 w-10 rounded-full text-xl font-bold ${
+                          esgotado
+                            ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+                            : "bg-pink-600 text-white"
+                        }`}
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="px-3 pb-3">
-                    <button
-                      onClick={() => adicionar(item.id, item.nome)}
-                      disabled={esgotado}
-                      className={`w-full py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${
-                        esgotado
-                          ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                          : "bg-pink-500 text-white hover:bg-pink-600"
-                      }`}
-                    >
-                      {esgotado ? "Indisponível" : "Adicionar"}
-                    </button>
+                  <div className="mt-6 space-y-6">
+                    {Array.from({ length: quantidade }).map((_, index) => {
+                      const item = dados[produto.id]?.[index] || {
+                        mensagem: "",
+                        remetente: "",
+                        nome: "",
+                        sala: "",
+                        anonimo: false,
+                        cpf: "",
+                      }
+
+                      return (
+                        <div
+                          key={`${produto.id}-${index}`}
+                          className="rounded-2xl border border-pink-100 bg-pink-50 p-4"
+                        >
+                          <h3 className="mb-4 text-sm font-bold text-pink-700">
+                            {produto.nome} #{index + 1}
+                          </h3>
+
+                          <div className="grid gap-4 md:grid-cols-2">
+                            {produtoEhIngresso ? (
+                              <>
+                                <div>
+                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Nome completo *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={item.nome}
+                                    onChange={(e) =>
+                                      atualizarCampo(
+                                        produto.id,
+                                        index,
+                                        "nome",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    placeholder="Digite o nome completo"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    CPF *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={formatarCPF(item.cpf || "")}
+                                    onChange={(e) =>
+                                      atualizarCampo(
+                                        produto.id,
+                                        index,
+                                        "cpf",
+                                        e.target.value.replace(/\D/g, "").slice(0, 11)
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    placeholder="000.000.000-00"
+                                  />
+                                </div>
+
+                                <div className="md:col-span-2">
+                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Sala *
+                                  </label>
+                                  <select
+                                    value={item.sala}
+                                    onChange={(e) =>
+                                      atualizarCampo(
+                                        produto.id,
+                                        index,
+                                        "sala",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                  >
+                                    <option value="">Selecione a sala</option>
+                                    {salas.map((sala) => (
+                                      <option key={sala} value={sala}>
+                                        {sala}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="md:col-span-2">
+                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Mensagem
+                                  </label>
+                                  <textarea
+                                    value={item.mensagem}
+                                    onChange={(e) =>
+                                      atualizarCampo(
+                                        produto.id,
+                                        index,
+                                        "mensagem",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="min-h-[100px] w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    placeholder="Digite a mensagem"
+                                  />
+                                </div>
+
+                                <div className="md:col-span-2">
+                                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                    <input
+                                      type="checkbox"
+                                      checked={item.anonimo || false}
+                                      onChange={(e) =>
+                                        atualizarCampo(
+                                          produto.id,
+                                          index,
+                                          "anonimo",
+                                          e.target.checked
+                                        )
+                                      }
+                                    />
+                                    Enviar anonimamente
+                                  </label>
+                                </div>
+
+                                {!item.anonimo && (
+                                  <div>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                                      Remetente
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={item.remetente}
+                                      onChange={(e) =>
+                                        atualizarCampo(
+                                          produto.id,
+                                          index,
+                                          "remetente",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                      placeholder="Seu nome"
+                                    />
+                                  </div>
+                                )}
+
+                                <div>
+                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Destinatário *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={item.nome}
+                                    onChange={(e) =>
+                                      atualizarCampo(
+                                        produto.id,
+                                        index,
+                                        "nome",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    placeholder="Nome de quem vai receber"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Sala *
+                                  </label>
+                                  <select
+                                    value={item.sala}
+                                    onChange={(e) =>
+                                      atualizarCampo(
+                                        produto.id,
+                                        index,
+                                        "sala",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                  >
+                                    <option value="">Selecione a sala</option>
+                                    {salas.map((sala) => (
+                                      <option key={sala} value={sala}>
+                                        {sala}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
-                </div>
+                </section>
               )
             })}
-          </div>
-        </div>
-      </div>
 
-      <a
-        href="https://wa.me/5599999999999?text=Oi%2C%20quero%20tirar%20uma%20d%C3%BAvida"
-        target="_blank"
-        rel="noreferrer"
-        className="fixed bottom-4 right-4 bg-green-500 text-white p-4 rounded-full shadow-xl z-50 hover:scale-110 transition"
-      >
-        <MessageCircle size={24} />
-      </a>
-    </div>
+            <section className="rounded-2xl bg-white p-5 shadow">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    WhatsApp *
+                  </label>
+                  <input
+                    type="text"
+                    value={formatarWhats(whats)}
+                    onChange={(e) =>
+                      setWhats(e.target.value.replace(/\D/g, "").slice(0, 11))
+                    }
+                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                    placeholder="(31) 99999-9999"
+                  />
+                </div>
+
+                <div className="flex flex-col justify-end">
+                  <div className="rounded-xl bg-pink-50 p-4">
+                    <p className="text-sm text-gray-700">
+                      Itens: <strong>{totalItens}</strong>
+                    </p>
+                    <p className="text-lg font-bold text-pink-700">
+                      Total: R$ {totalPreco.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-col gap-3 md:flex-row">
+                <button
+                  type="button"
+                  onClick={limparCarrinhoCompleto}
+                  className="rounded-xl bg-gray-200 px-5 py-3 font-semibold text-gray-800"
+                >
+                  Limpar carrinho
+                </button>
+
+                <button
+                  type="button"
+                  onClick={finalizarPedido}
+                  disabled={carregando}
+                  className="rounded-xl bg-pink-600 px-5 py-3 font-semibold text-white disabled:opacity-60"
+                >
+                  {carregando ? "Processando..." : "Confirmar e pagar"}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
+    </main>
   )
 }

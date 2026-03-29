@@ -455,37 +455,37 @@ export default function CartPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-pink-50 via-rose-50 to-white p-4 md:p-8 text-black">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#f7f3ee_0%,#f2ebe4_52%,#fbf8f5_100%)] p-4 text-[#241718] md:p-8">
       <div className="mx-auto max-w-5xl">
-        <div className="sticky top-0 z-40 mb-6 rounded-2xl bg-pink-50/90 backdrop-blur">
-          <div className="flex items-center justify-between gap-4 px-1 py-2">
+        <div className="sticky top-0 z-40 mb-6 rounded-[28px] border border-[#eaded6] bg-[rgba(247,243,238,0.92)] backdrop-blur-xl shadow-[0_14px_34px_rgba(74,9,18,0.08)]">
+          <div className="flex items-center justify-between gap-4 px-3 py-3">
             <button
               onClick={() => router.back()}
-              className="p-2 rounded-full bg-white shadow border border-pink-100 hover:bg-pink-50 transition"
+              className="rounded-full bg-white p-2.5 shadow border border-[#eaded6] transition hover:bg-[#f6eee8] active:scale-95"
             >
-              <ArrowLeft size={22} className="text-pink-600" />
+              <ArrowLeft size={22} className="text-[#6B0F1A]" />
             </button>
 
-            <h1 className="text-2xl font-bold text-pink-700">Carrinho</h1>
+            <h1 className="text-2xl font-extrabold text-[#6B0F1A]">Carrinho</h1>
 
             <Link
               href="/cart"
-              className="p-2 rounded-full bg-white shadow border border-pink-100"
+              className="rounded-full bg-white p-2.5 shadow border border-[#eaded6]"
             >
-              <ShoppingCart size={22} className="text-pink-600" />
+              <ShoppingCart size={22} className="text-[#6B0F1A]" />
             </Link>
           </div>
         </div>
 
         {itensNoCarrinho.length === 0 ? (
-          <div className="rounded-2xl bg-white p-8 text-center shadow">
-            <p className="text-lg font-medium text-gray-700">
+          <div className="rounded-[28px] border border-[#eaded6] bg-white p-8 text-center shadow-[0_16px_36px_rgba(74,9,18,0.08)]">
+            <p className="text-lg font-medium text-[#6b5958]">
               Seu carrinho está vazio.
             </p>
 
             <Link
               href="/"
-              className="mt-4 inline-block rounded-xl bg-pink-600 px-5 py-3 font-semibold text-white"
+              className="mt-4 inline-block rounded-2xl bg-[linear-gradient(135deg,#6B0F1A_0%,#8A2132_100%)] px-5 py-3 font-semibold text-[#F7F3EE] shadow-[0_14px_26px_rgba(107,15,26,0.2)] transition active:scale-[0.98]"
             >
               Escolher produtos
             </Link>
@@ -500,32 +500,36 @@ export default function CartPage() {
               return (
                 <section
                   key={produto.id}
-                  className="rounded-2xl bg-white p-5 shadow"
+                  className="rounded-[28px] border border-[#eaded6] bg-white p-5 shadow-[0_16px_36px_rgba(74,9,18,0.08)]"
                 >
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="flex items-center gap-4">
                       {produto.imagem ? (
-                        <img
-                          src={produto.imagem}
-                          alt={produto.nome}
-                          className={`h-20 w-20 rounded-xl object-cover ${
-                            esgotado ? "grayscale opacity-70" : ""
-                          }`}
-                        />
+                        <div className="relative overflow-hidden rounded-2xl">
+                          <img
+                            src={produto.imagem}
+                            alt={produto.nome}
+                            className={`h-20 w-20 object-cover transition ${
+                              esgotado ? "blur-[1px] brightness-[0.55]" : ""
+                            }`}
+                          />
+                          {esgotado && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                              <span className="rounded-full bg-[#6B0F1A] px-2 py-1 text-[10px] font-extrabold text-[#F7F3EE]">
+                                ESGOTADO
+                              </span>
+                            </div>
+                          )}
+                        </div>
                       ) : null}
 
                       <div>
-                        <h2 className="text-lg font-bold text-gray-800">
+                        <h2 className="text-lg font-extrabold text-[#241718]">
                           {produto.nome}
                         </h2>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-[#6e5d5b]">
                           R$ {produto.preco.toFixed(2)}
                         </p>
-                        {esgotado && (
-                          <p className="mt-1 text-sm font-semibold text-red-500">
-                            ESGOTADO
-                          </p>
-                        )}
                       </div>
                     </div>
 
@@ -533,7 +537,7 @@ export default function CartPage() {
                       <button
                         type="button"
                         onClick={() => alterarQuantidade(produto.id, -1)}
-                        className="h-10 w-10 rounded-full bg-pink-100 text-xl font-bold text-pink-700"
+                        className="h-10 w-10 rounded-full bg-[#efe7df] text-xl font-bold text-[#6B0F1A] transition active:scale-95"
                       >
                         -
                       </button>
@@ -546,10 +550,10 @@ export default function CartPage() {
                         type="button"
                         onClick={() => alterarQuantidade(produto.id, 1)}
                         disabled={esgotado}
-                        className={`h-10 w-10 rounded-full text-xl font-bold ${
+                        className={`h-10 w-10 rounded-full text-xl font-bold transition active:scale-95 ${
                           esgotado
-                            ? "bg-gray-300 text-gray-600 cursor-not-allowed"
-                            : "bg-pink-600 text-white"
+                            ? "bg-[#d7d0cb] text-[#7b7470] cursor-not-allowed"
+                            : "bg-[#6B0F1A] text-[#F7F3EE]"
                         }`}
                       >
                         +
@@ -571,9 +575,9 @@ export default function CartPage() {
                       return (
                         <div
                           key={`${produto.id}-${index}`}
-                          className="rounded-2xl border border-pink-100 bg-pink-50 p-4"
+                          className="rounded-[24px] border border-[#eaded6] bg-[#fbf8f5] p-4"
                         >
-                          <h3 className="mb-4 text-sm font-bold text-pink-700">
+                          <h3 className="mb-4 text-sm font-extrabold text-[#6B0F1A]">
                             {produto.nome} #{index + 1}
                           </h3>
 
@@ -581,7 +585,7 @@ export default function CartPage() {
                             {produtoEhIngresso ? (
                               <>
                                 <div>
-                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                  <label className="mb-1 block text-sm font-medium text-[#4e4140]">
                                     Nome completo *
                                   </label>
                                   <input
@@ -595,13 +599,13 @@ export default function CartPage() {
                                         e.target.value
                                       )
                                     }
-                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    className="w-full rounded-2xl border border-[#e2d6cf] bg-white p-3 outline-none"
                                     placeholder="Digite o nome completo"
                                   />
                                 </div>
 
                                 <div>
-                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                  <label className="mb-1 block text-sm font-medium text-[#4e4140]">
                                     CPF *
                                   </label>
                                   <input
@@ -615,13 +619,13 @@ export default function CartPage() {
                                         e.target.value.replace(/\D/g, "").slice(0, 11)
                                       )
                                     }
-                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    className="w-full rounded-2xl border border-[#e2d6cf] bg-white p-3 outline-none"
                                     placeholder="000.000.000-00"
                                   />
                                 </div>
 
                                 <div className="md:col-span-2">
-                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                  <label className="mb-1 block text-sm font-medium text-[#4e4140]">
                                     Sala *
                                   </label>
                                   <select
@@ -634,7 +638,7 @@ export default function CartPage() {
                                         e.target.value
                                       )
                                     }
-                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    className="w-full rounded-2xl border border-[#e2d6cf] bg-white p-3 outline-none"
                                   >
                                     <option value="">Selecione a sala</option>
                                     {salas.map((sala) => (
@@ -648,7 +652,7 @@ export default function CartPage() {
                             ) : (
                               <>
                                 <div className="md:col-span-2">
-                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                  <label className="mb-1 block text-sm font-medium text-[#4e4140]">
                                     Mensagem
                                   </label>
                                   <textarea
@@ -661,13 +665,13 @@ export default function CartPage() {
                                         e.target.value
                                       )
                                     }
-                                    className="min-h-[100px] w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    className="min-h-[100px] w-full rounded-2xl border border-[#e2d6cf] bg-white p-3 outline-none"
                                     placeholder="Digite a mensagem"
                                   />
                                 </div>
 
                                 <div className="md:col-span-2">
-                                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                                  <label className="flex items-center gap-2 text-sm font-medium text-[#4e4140]">
                                     <input
                                       type="checkbox"
                                       checked={item.anonimo || false}
@@ -686,7 +690,7 @@ export default function CartPage() {
 
                                 {!item.anonimo && (
                                   <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    <label className="mb-1 block text-sm font-medium text-[#4e4140]">
                                       Remetente
                                     </label>
                                     <input
@@ -700,14 +704,14 @@ export default function CartPage() {
                                           e.target.value
                                         )
                                       }
-                                      className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                      className="w-full rounded-2xl border border-[#e2d6cf] bg-white p-3 outline-none"
                                       placeholder="Seu nome"
                                     />
                                   </div>
                                 )}
 
                                 <div>
-                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                  <label className="mb-1 block text-sm font-medium text-[#4e4140]">
                                     Destinatário *
                                   </label>
                                   <input
@@ -721,13 +725,13 @@ export default function CartPage() {
                                         e.target.value
                                       )
                                     }
-                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    className="w-full rounded-2xl border border-[#e2d6cf] bg-white p-3 outline-none"
                                     placeholder="Nome de quem vai receber"
                                   />
                                 </div>
 
                                 <div>
-                                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                                  <label className="mb-1 block text-sm font-medium text-[#4e4140]">
                                     Sala *
                                   </label>
                                   <select
@@ -740,7 +744,7 @@ export default function CartPage() {
                                         e.target.value
                                       )
                                     }
-                                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                                    className="w-full rounded-2xl border border-[#e2d6cf] bg-white p-3 outline-none"
                                   >
                                     <option value="">Selecione a sala</option>
                                     {salas.map((sala) => (
@@ -761,10 +765,10 @@ export default function CartPage() {
               )
             })}
 
-            <section className="rounded-2xl bg-white p-5 shadow">
+            <section className="rounded-[28px] border border-[#eaded6] bg-white p-5 shadow-[0_16px_36px_rgba(74,9,18,0.08)]">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                  <label className="mb-1 block text-sm font-medium text-[#4e4140]">
                     WhatsApp *
                   </label>
                   <input
@@ -773,17 +777,17 @@ export default function CartPage() {
                     onChange={(e) =>
                       setWhats(e.target.value.replace(/\D/g, "").slice(0, 11))
                     }
-                    className="w-full rounded-xl border border-pink-200 bg-white p-3 outline-none"
+                    className="w-full rounded-2xl border border-[#e2d6cf] bg-white p-3 outline-none"
                     placeholder="(31) 99999-9999"
                   />
                 </div>
 
                 <div className="flex flex-col justify-end">
-                  <div className="rounded-xl bg-pink-50 p-4">
-                    <p className="text-sm text-gray-700">
+                  <div className="rounded-[24px] bg-[#fbf8f5] p-4">
+                    <p className="text-sm text-[#655554]">
                       Itens: <strong>{totalItens}</strong>
                     </p>
-                    <p className="text-lg font-bold text-pink-700">
+                    <p className="text-xl font-extrabold text-[#6B0F1A]">
                       Total: R$ {totalPreco.toFixed(2)}
                     </p>
                   </div>
@@ -794,7 +798,7 @@ export default function CartPage() {
                 <button
                   type="button"
                   onClick={limparCarrinhoCompleto}
-                  className="rounded-xl bg-gray-200 px-5 py-3 font-semibold text-gray-800"
+                  className="rounded-2xl bg-[#ddd6d0] px-5 py-3 font-semibold text-[#4a413f] transition active:scale-[0.98]"
                 >
                   Limpar carrinho
                 </button>
@@ -803,7 +807,7 @@ export default function CartPage() {
                   type="button"
                   onClick={finalizarPedido}
                   disabled={carregando}
-                  className="rounded-xl bg-pink-600 px-5 py-3 font-semibold text-white disabled:opacity-60"
+                  className="rounded-2xl bg-[linear-gradient(135deg,#6B0F1A_0%,#8A2132_100%)] px-5 py-3 font-semibold text-[#F7F3EE] shadow-[0_14px_26px_rgba(107,15,26,0.2)] transition disabled:opacity-60 active:scale-[0.98]"
                 >
                   {carregando ? "Processando..." : "Confirmar e pagar"}
                 </button>
