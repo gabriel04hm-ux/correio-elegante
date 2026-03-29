@@ -13,6 +13,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Play,
+  House,
+  Package,
+  Info,
+  Image as ImageIcon,
+  Instagram,
+  Smartphone,
+  CircleHelp,
 } from "lucide-react"
 
 type EstoqueItem = {
@@ -29,7 +36,6 @@ type Produto = {
   preco: number
   imagem: string
   descricao: string
-  destaque?: string
 }
 
 type StoryItem = {
@@ -68,7 +74,6 @@ export default function Home() {
       preco: 0.5,
       imagem: "/p1.jpg",
       descricao: "Um gesto simples e cheio de carinho para surpreender alguém especial.",
-      destaque: "Delicado",
     },
     {
       id: 2,
@@ -76,7 +81,6 @@ export default function Home() {
       preco: 0.75,
       imagem: "/p2.jpg",
       descricao: "Um mimo doce com uma mensagem especial para alegrar o dia.",
-      destaque: "Doce mimo",
     },
     {
       id: 3,
@@ -84,7 +88,6 @@ export default function Home() {
       preco: 1,
       imagem: "/p3.jpg",
       descricao: "Uma forma divertida e doce de demonstrar carinho.",
-      destaque: "Mais pedido",
     },
     {
       id: 4,
@@ -92,7 +95,6 @@ export default function Home() {
       preco: 3.5,
       imagem: "/p4.jpg",
       descricao: "Perfeito para surpreender com algo mais especial e saboroso.",
-      destaque: "Especial",
     },
     {
       id: 5,
@@ -100,7 +102,6 @@ export default function Home() {
       preco: 2.5,
       imagem: "/p5.jpg",
       descricao: "Uma opção divertida e colorida para presentear.",
-      destaque: "Colorido",
     },
     {
       id: 6,
@@ -108,7 +109,6 @@ export default function Home() {
       preco: 4,
       imagem: "/p1.jpg",
       descricao: "Inclui uma foto especial para tornar o momento inesquecível.",
-      destaque: "Memorável",
     },
     {
       id: 7,
@@ -116,7 +116,6 @@ export default function Home() {
       preco: 12,
       imagem: "/p2.jpg",
       descricao: "Um presente completo, delicado e cheio de significado.",
-      destaque: "Premium",
     },
     {
       id: 8,
@@ -124,7 +123,6 @@ export default function Home() {
       preco: 3,
       imagem: "/p3.jpg",
       descricao: "Ingresso especial para o Dia D. Basta preencher nome completo, sala e CPF.",
-      destaque: "Evento",
     },
   ]
 
@@ -337,12 +335,12 @@ export default function Home() {
   )
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f7f3ee_0%,#f2ebe4_52%,#fbf8f5_100%)] text-[#241718] transition-colors duration-500">
-      <header className="sticky top-0 z-40 border-b border-[#e9ddd4] bg-[rgba(247,243,238,0.88)] backdrop-blur-xl shadow-[0_10px_35px_rgba(74,9,18,0.08)]">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#f8f4ef_0%,#f3ece6_50%,#fcfaf7_100%)] text-[#241718]">
+      <header className="sticky top-0 z-40 border-b border-[#eaded6] bg-[rgba(248,244,239,0.92)] backdrop-blur-xl shadow-[0_10px_30px_rgba(101,8,20,0.08)]">
         <div className="relative mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <button
             onClick={() => setMenuAberto(!menuAberto)}
-            className="z-10 rounded-2xl p-2.5 text-[#6B0F1A] transition active:scale-95 hover:bg-[#efe7df]"
+            className="z-10 rounded-2xl p-2.5 text-[#7d1020] transition hover:bg-[#f1e7e2] active:scale-95"
           >
             <Menu size={24} />
           </button>
@@ -351,19 +349,19 @@ export default function Home() {
             <img
               src="/logo.png"
               alt="Logo"
-              className="h-12 w-auto object-contain sm:h-14 drop-shadow-[0_8px_20px_rgba(107,15,26,0.18)]"
+              className="h-12 w-auto object-contain sm:h-14"
             />
           </div>
 
           <Link href="/cart" className="relative z-10 rounded-2xl p-2.5 transition active:scale-95">
             <ShoppingCart
               size={28}
-              className={`text-[#6B0F1A] transition duration-300 ${
+              className={`text-[#7d1020] transition duration-300 ${
                 animar ? "scale-125" : "scale-100"
               }`}
             />
             {totalItens > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#6B0F1A] px-1 text-xs font-bold text-[#F7F3EE] shadow-lg">
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#7d1020] px-1 text-xs font-bold text-[#F7F3EE] shadow-lg">
                 {totalItens}
               </span>
             )}
@@ -371,29 +369,92 @@ export default function Home() {
         </div>
 
         {menuAberto && (
-          <div className="border-t border-[#eaded6] bg-[#fbf8f5] px-4 py-3 shadow-[0_12px_28px_rgba(74,9,18,0.08)]">
-            <div className="mx-auto flex max-w-6xl flex-col gap-3 text-sm font-medium text-[#5f4b4a]">
-              <a href="#inicio" onClick={() => setMenuAberto(false)} className="transition hover:text-[#6B0F1A]">🏠 Início</a>
-              <a href="#produtos" onClick={() => setMenuAberto(false)} className="transition hover:text-[#6B0F1A]">📦 Produtos</a>
-              <a href="#como-funciona" onClick={() => setMenuAberto(false)} className="transition hover:text-[#6B0F1A]">💌 Como funciona</a>
-              <a href="#terceirao" onClick={() => setMenuAberto(false)} className="transition hover:text-[#6B0F1A]">📸 Terceirão</a>
-              <a href="#sobre" onClick={() => setMenuAberto(false)} className="transition hover:text-[#6B0F1A]">📜 Sobre nós</a>
+          <div className="border-t border-[#eaded6] bg-[#fcfaf7] px-4 py-4 shadow-[0_16px_30px_rgba(101,8,20,0.08)]">
+            <div className="mx-auto max-w-6xl space-y-2">
+              <a
+                href="#inicio"
+                onClick={() => setMenuAberto(false)}
+                className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-[#533f3f] transition hover:bg-[#f3ebe4] hover:text-[#7d1020]"
+              >
+                <House size={18} />
+                Início
+              </a>
+
+              <a
+                href="#produtos"
+                onClick={() => setMenuAberto(false)}
+                className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-[#533f3f] transition hover:bg-[#f3ebe4] hover:text-[#7d1020]"
+              >
+                <Package size={18} />
+                Produtos
+              </a>
+
+              <a
+                href="#como-funciona"
+                onClick={() => setMenuAberto(false)}
+                className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-[#533f3f] transition hover:bg-[#f3ebe4] hover:text-[#7d1020]"
+              >
+                <CircleHelp size={18} />
+                Como funciona
+              </a>
+
+              <a
+                href="#terceirao"
+                onClick={() => setMenuAberto(false)}
+                className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-[#533f3f] transition hover:bg-[#f3ebe4] hover:text-[#7d1020]"
+              >
+                <ImageIcon size={18} />
+                Terceirão
+              </a>
+
+              <a
+                href="#sobre"
+                onClick={() => setMenuAberto(false)}
+                className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-[#533f3f] transition hover:bg-[#f3ebe4] hover:text-[#7d1020]"
+              >
+                <Info size={18} />
+                Sobre nós
+              </a>
+
+              <a
+                href="https://instagram.com"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => setMenuAberto(false)}
+                className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-[#533f3f] transition hover:bg-[#f3ebe4] hover:text-[#7d1020]"
+              >
+                <Instagram size={18} />
+                Instagram
+              </a>
+
+              <a
+                href="https://tiktok.com"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => setMenuAberto(false)}
+                className="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-[#533f3f] transition hover:bg-[#f3ebe4] hover:text-[#7d1020]"
+              >
+                <Smartphone size={18} />
+                TikTok
+              </a>
+
               <a
                 href="https://wa.me/5599999999999?text=Oi%2C%20quero%20tirar%20uma%20d%C3%BAvida%20sobre%20os%20produtos"
                 target="_blank"
                 rel="noreferrer"
                 onClick={() => setMenuAberto(false)}
-                className="transition hover:text-[#6B0F1A]"
+                className="flex items-center gap-3 rounded-2xl bg-[linear-gradient(135deg,#7d1020_0%,#a2182d_100%)] px-3 py-3 text-sm font-semibold text-[#F7F3EE] shadow-[0_12px_24px_rgba(125,16,32,0.16)] transition hover:opacity-95"
               >
-                💬 Suporte no WhatsApp
+                <MessageCircle size={18} />
+                Suporte no WhatsApp
               </a>
             </div>
           </div>
         )}
       </header>
 
-      <section className="mx-auto max-w-6xl px-4 pt-4">
-        <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <section className="mx-auto max-w-6xl px-4 pt-5">
+        <div className="flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {stories.map((story) => (
             <button
               key={story.id}
@@ -401,7 +462,7 @@ export default function Home() {
               type="button"
               onClick={() => setIndiceCarousel((story.id - 1) % fotosTerceirao.length)}
             >
-              <div className="relative rounded-full bg-[conic-gradient(from_180deg_at_50%_50%,#6B0F1A_0deg,#8A2132_120deg,#C97A8B_240deg,#6B0F1A_360deg)] p-[2px] shadow-[0_8px_24px_rgba(107,15,26,0.18)] transition duration-300 group-active:scale-95">
+              <div className="relative rounded-full bg-[conic-gradient(from_180deg_at_50%_50%,#7d1020_0deg,#b01c32_120deg,#d17482_240deg,#7d1020_360deg)] p-[2px] shadow-[0_8px_22px_rgba(125,16,32,0.14)] transition duration-300 group-active:scale-95">
                 <div className="relative h-[74px] w-[74px] overflow-hidden rounded-full border-2 border-[#F7F3EE] bg-[#efe7df]">
                   <img
                     src={story.imagem}
@@ -410,7 +471,7 @@ export default function Home() {
                   />
                   {story.tipo === "video" && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/18">
-                      <div className="rounded-full bg-white/88 p-1.5 text-[#6B0F1A]">
+                      <div className="rounded-full bg-white/88 p-1.5 text-[#7d1020]">
                         <Play size={14} fill="currentColor" />
                       </div>
                     </div>
@@ -425,9 +486,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="inicio" className="mx-auto max-w-6xl px-4 pt-4">
-        <div className="flex items-center rounded-full border border-[#eaded6] bg-white px-4 py-3 shadow-[0_12px_28px_rgba(74,9,18,0.08)]">
-          <Search size={18} className="text-[#8A2132]" />
+      <section id="inicio" className="mx-auto max-w-6xl px-4 pt-6">
+        <div className="flex items-center rounded-full border border-[#eaded6] bg-white px-4 py-3 shadow-[0_12px_28px_rgba(101,8,20,0.06)]">
+          <Search size={18} className="text-[#8f1830]" />
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -437,19 +498,19 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 pt-4">
-        <div className="relative overflow-hidden rounded-[30px] border border-[#e9ddd4] shadow-[0_24px_60px_rgba(74,9,18,0.14)]">
+      <section className="mx-auto max-w-6xl px-4 pt-6">
+        <div className="relative overflow-hidden rounded-[32px] border border-[#e7dbd3] shadow-[0_24px_56px_rgba(101,8,20,0.12)]">
           <img
             src="/banner.jpg"
             alt="Banner principal"
-            className="h-[220px] w-full object-cover sm:h-[290px]"
+            className="h-[220px] w-full object-cover sm:h-[280px]"
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(74,9,18,0.82)_0%,rgba(107,15,26,0.56)_42%,rgba(107,15,26,0.08)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(101,8,20,0.82)_0%,rgba(125,16,32,0.54)_40%,rgba(125,16,32,0.08)_100%)]" />
           <div className="absolute inset-0 flex flex-col justify-center px-6 text-[#F7F3EE] sm:px-8">
-            <span className="w-fit rounded-full bg-white/12 px-3 py-1 text-xs font-semibold tracking-wide backdrop-blur">
+            <span className="w-fit rounded-full bg-white/12 px-3 py-1 text-[11px] font-semibold tracking-wide backdrop-blur">
               TERCEIRÃO 2026
             </span>
-            <h1 className="mt-3 max-w-xl text-3xl font-extrabold leading-tight sm:text-5xl">
+            <h1 className="mt-3 max-w-lg text-[2rem] font-extrabold leading-tight sm:text-[2.5rem]">
               Correio elegante com identidade, estilo e emoção
             </h1>
             <p className="mt-3 max-w-md text-sm text-[#f5e9e1] sm:text-base">
@@ -457,7 +518,7 @@ export default function Home() {
             </p>
             <a
               href="#produtos"
-              className="mt-5 w-fit rounded-full bg-[#F7F3EE] px-6 py-3 font-semibold text-[#6B0F1A] shadow-lg transition hover:scale-[1.03] active:scale-95"
+              className="mt-5 w-fit rounded-full bg-[#F7F3EE] px-6 py-3 font-semibold text-[#7d1020] shadow-lg transition hover:scale-[1.03] active:scale-95"
             >
               Ver produtos
             </a>
@@ -465,7 +526,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-4 pt-6">
+      <section className="mx-auto max-w-6xl px-4 pt-8">
         <div className="flex gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {[
             {
@@ -491,9 +552,9 @@ export default function Home() {
           ].map((item) => (
             <div
               key={item.titulo}
-              className="min-w-[255px] rounded-[26px] border border-[#eaded6] bg-white p-5 shadow-[0_14px_34px_rgba(74,9,18,0.08)] transition active:scale-[0.99]"
+              className="min-w-[255px] rounded-[28px] border border-[#eaded6] bg-white p-5 shadow-[0_14px_34px_rgba(101,8,20,0.06)] transition active:scale-[0.99]"
             >
-              <div className="flex items-center gap-2 font-bold text-[#6B0F1A]">
+              <div className="flex items-center gap-2 font-bold text-[#7d1020]">
                 {item.icon}
                 {item.titulo}
               </div>
@@ -505,7 +566,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="produtos" className="mx-auto max-w-6xl px-4 pt-9">
+      <section id="produtos" className="mx-auto max-w-6xl px-4 pt-12">
         <div className="mb-5">
           <h2 className="text-3xl font-extrabold text-[#241718]">Produtos</h2>
           <p className="mt-1 text-sm text-[#7d6a68]">
@@ -522,75 +583,64 @@ export default function Home() {
             return (
               <div
                 key={p.id}
-                className={`overflow-hidden rounded-[28px] border border-[#eaded6] bg-white shadow-[0_16px_36px_rgba(74,9,18,0.08)] transition duration-300 active:scale-[0.985] ${
-                  esgotado ? "" : "hover:-translate-y-1 hover:shadow-[0_24px_44px_rgba(74,9,18,0.12)]"
-                }`}
+                className="overflow-hidden rounded-[28px] border border-[#eaded6] bg-white shadow-[0_16px_36px_rgba(101,8,20,0.06)] transition duration-300 hover:shadow-[0_22px_42px_rgba(101,8,20,0.10)]"
               >
-                <div className="relative">
-                  <Link href={`/produto/${p.id}`} className="block">
+                <Link href={`/produto/${p.id}`} className="block">
+                  <div className="relative">
                     <img
                       src={p.imagem}
                       alt={p.nome}
                       className={`h-40 w-full object-cover transition duration-500 ${
-                        esgotado ? "scale-[1.02] blur-[1px] brightness-[0.55]" : "hover:scale-105"
+                        esgotado ? "scale-[1.02] blur-[1px] brightness-[0.52]" : "hover:scale-105"
                       }`}
                     />
-                  </Link>
-
-                  <div className="absolute left-3 top-3 flex flex-wrap gap-2">
-                    {p.destaque && !esgotado && (
-                      <span className="rounded-full bg-[#F7F3EE]/92 px-3 py-1 text-[11px] font-bold text-[#6B0F1A] shadow">
-                        {p.destaque}
-                      </span>
-                    )}
 
                     {esgotado && (
-                      <span className="rounded-full bg-[#6B0F1A] px-4 py-1.5 text-xs font-extrabold tracking-wide text-[#F7F3EE] shadow-[0_10px_24px_rgba(74,9,18,0.35)]">
+                      <span className="absolute left-3 top-3 rounded-full bg-[#7d1020] px-4 py-1.5 text-xs font-extrabold tracking-wide text-[#F7F3EE] shadow-[0_10px_24px_rgba(101,8,20,0.28)]">
                         ESGOTADO
                       </span>
                     )}
                   </div>
-                </div>
 
-                <div className="p-4">
-                  <Link href={`/produto/${p.id}`} className="block">
+                  <div className="p-4">
                     <h3 className="line-clamp-1 text-sm font-extrabold text-[#241718]">
                       {p.nome}
                     </h3>
 
-                    <p className="mt-1 text-xl font-extrabold text-[#6B0F1A]">
+                    <p className="mt-1 text-xl font-extrabold text-[#7d1020]">
                       R$ {p.preco.toFixed(2)}
                     </p>
 
                     <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[#7a6664]">
                       {p.descricao}
                     </p>
-                  </Link>
-
-                  <div className="mt-4 flex flex-col gap-2">
-                    <button
-                      onClick={() => adicionar(p.id, p.nome)}
-                      disabled={esgotado}
-                      className={`w-full rounded-2xl py-2.5 text-sm font-semibold transition active:scale-[0.98] ${
-                        esgotado
-                          ? "cursor-not-allowed bg-[#d6d0cb] text-[#7b7470]"
-                          : "bg-[linear-gradient(135deg,#6B0F1A_0%,#8A2132_100%)] text-[#F7F3EE] shadow-[0_12px_22px_rgba(107,15,26,0.24)] hover:opacity-95"
-                      }`}
-                    >
-                      {esgotado ? "Indisponível" : "Adicionar ao carrinho"}
-                    </button>
-
-                    <a
-                      href={`https://wa.me/5599999999999?text=${encodeURIComponent(
-                        whatsappMsg
-                      )}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="w-full rounded-2xl border border-[#d8cac2] bg-[#fbf8f5] py-2.5 text-center text-sm font-semibold text-[#6B0F1A] transition hover:bg-[#f3ebe4] active:scale-[0.98]"
-                    >
-                      Tirar dúvida
-                    </a>
                   </div>
+                </Link>
+
+                <div className="px-4 pb-4 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => adicionar(p.id, p.nome)}
+                    disabled={esgotado}
+                    className={`w-full rounded-2xl py-2.5 text-sm font-semibold transition active:scale-[0.98] ${
+                      esgotado
+                        ? "cursor-not-allowed bg-[#d6d0cb] text-[#7b7470]"
+                        : "bg-[linear-gradient(135deg,#7d1020_0%,#a2182d_100%)] text-[#F7F3EE] shadow-[0_12px_22px_rgba(125,16,32,0.20)] hover:opacity-95"
+                    }`}
+                  >
+                    {esgotado ? "Indisponível" : "Adicionar ao carrinho"}
+                  </button>
+
+                  <a
+                    href={`https://wa.me/5599999999999?text=${encodeURIComponent(
+                      whatsappMsg
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full rounded-2xl border border-[#d8cac2] bg-[#fbf8f5] py-2.5 text-center text-sm font-semibold text-[#7d1020] transition hover:bg-[#f3ebe4] active:scale-[0.98]"
+                  >
+                    Tirar dúvida
+                  </a>
                 </div>
               </div>
             )
@@ -598,14 +648,14 @@ export default function Home() {
         </div>
 
         {filtrados.length === 0 && (
-          <div className="mt-4 rounded-[24px] border border-[#eaded6] bg-white p-6 text-center text-[#7d6a68] shadow-[0_12px_28px_rgba(74,9,18,0.08)]">
+          <div className="mt-4 rounded-[24px] border border-[#eaded6] bg-white p-6 text-center text-[#7d6a68] shadow-[0_12px_28px_rgba(101,8,20,0.06)]">
             Nenhum produto encontrado.
           </div>
         )}
       </section>
 
-      <section id="como-funciona" className="mx-auto max-w-6xl px-4 pt-10">
-        <div className="overflow-hidden rounded-[30px] bg-[linear-gradient(135deg,#6B0F1A_0%,#8A2132_55%,#A13A4D_100%)] p-6 text-[#F7F3EE] shadow-[0_24px_56px_rgba(74,9,18,0.24)]">
+      <section id="como-funciona" className="mx-auto max-w-6xl px-4 pt-14">
+        <div className="overflow-hidden rounded-[32px] bg-[linear-gradient(135deg,#7d1020_0%,#a2182d_58%,#be4054_100%)] p-6 text-[#F7F3EE] shadow-[0_24px_56px_rgba(101,8,20,0.22)]">
           <h2 className="text-3xl font-extrabold">Como funciona</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-3">
             {[
@@ -636,8 +686,8 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="terceirao" className="mx-auto max-w-6xl px-4 pt-10">
-        <div className="overflow-hidden rounded-[30px] border border-[#eaded6] bg-white p-4 shadow-[0_18px_40px_rgba(74,9,18,0.09)] sm:p-6">
+      <section id="terceirao" className="mx-auto max-w-6xl px-4 pt-14">
+        <div className="overflow-hidden rounded-[32px] border border-[#eaded6] bg-white p-4 shadow-[0_18px_40px_rgba(101,8,20,0.06)] sm:p-6">
           <div className="mb-4">
             <h2 className="text-3xl font-extrabold text-[#241718]">
               Momentos do terceirão
@@ -648,7 +698,7 @@ export default function Home() {
           </div>
 
           <div
-            className="relative overflow-hidden rounded-[26px] bg-[#efe7df] select-none"
+            className="relative overflow-hidden rounded-[28px] bg-[#efe7df] select-none"
             onTouchStart={(e) => iniciarToque(e.touches[0].clientX)}
             onTouchMove={(e) => moverToque(e.touches[0].clientX)}
             onTouchEnd={finalizarToque}
@@ -670,7 +720,7 @@ export default function Home() {
               type="button"
               onClick={fotoAnterior}
               aria-label="Foto anterior"
-              className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-[#6B0F1A] shadow-lg backdrop-blur transition hover:bg-white active:scale-95"
+              className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-[#7d1020] shadow-lg backdrop-blur transition hover:bg-white active:scale-95"
             >
               <ChevronLeft size={22} />
             </button>
@@ -679,7 +729,7 @@ export default function Home() {
               type="button"
               onClick={proximaFoto}
               aria-label="Próxima foto"
-              className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-[#6B0F1A] shadow-lg backdrop-blur transition hover:bg-white active:scale-95"
+              className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/85 text-[#7d1020] shadow-lg backdrop-blur transition hover:bg-white active:scale-95"
             >
               <ChevronRight size={22} />
             </button>
@@ -703,9 +753,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="sobre" className="mx-auto max-w-6xl px-4 pb-28 pt-10">
+      <section id="sobre" className="mx-auto max-w-6xl px-4 pb-28 pt-14">
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-[30px] border border-[#eaded6] bg-white p-6 shadow-[0_16px_36px_rgba(74,9,18,0.08)]">
+          <div className="rounded-[32px] border border-[#eaded6] bg-white p-6 shadow-[0_16px_36px_rgba(101,8,20,0.06)]">
             <h2 className="text-3xl font-extrabold text-[#241718]">Sobre nós</h2>
             <p className="mt-3 leading-relaxed text-[#6f5d5d]">
               Criamos uma forma simples e especial de surpreender alguém com presentes
@@ -714,7 +764,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="rounded-[30px] border border-[#eaded6] bg-white p-6 shadow-[0_16px_36px_rgba(74,9,18,0.08)]">
+          <div className="rounded-[32px] border border-[#eaded6] bg-white p-6 shadow-[0_16px_36px_rgba(101,8,20,0.06)]">
             <h2 className="text-3xl font-extrabold text-[#241718]">
               Redes e suporte
             </h2>
@@ -724,7 +774,7 @@ export default function Home() {
                 href="https://wa.me/5599999999999?text=Oi%2C%20quero%20falar%20com%20o%20suporte"
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-2xl bg-[linear-gradient(135deg,#6B0F1A_0%,#8A2132_100%)] py-3 text-center font-semibold text-[#F7F3EE] shadow-[0_14px_30px_rgba(107,15,26,0.22)] transition hover:opacity-95 active:scale-[0.98]"
+                className="rounded-2xl bg-[linear-gradient(135deg,#7d1020_0%,#a2182d_100%)] py-3 text-center font-semibold text-[#F7F3EE] shadow-[0_14px_30px_rgba(125,16,32,0.20)] transition hover:opacity-95 active:scale-[0.98]"
               >
                 Falar no WhatsApp
               </a>
@@ -733,7 +783,7 @@ export default function Home() {
                 href="https://instagram.com"
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-2xl border border-[#d8cac2] bg-[#fbf8f5] py-3 text-center font-semibold text-[#6B0F1A] transition hover:bg-[#f3ebe4] active:scale-[0.98]"
+                className="rounded-2xl border border-[#d8cac2] bg-[#fbf8f5] py-3 text-center font-semibold text-[#7d1020] transition hover:bg-[#f3ebe4] active:scale-[0.98]"
               >
                 Instagram
               </a>
@@ -742,7 +792,7 @@ export default function Home() {
                 href="https://tiktok.com"
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-2xl border border-[#d8cac2] bg-[#fbf8f5] py-3 text-center font-semibold text-[#6B0F1A] transition hover:bg-[#f3ebe4] active:scale-[0.98]"
+                className="rounded-2xl border border-[#d8cac2] bg-[#fbf8f5] py-3 text-center font-semibold text-[#7d1020] transition hover:bg-[#f3ebe4] active:scale-[0.98]"
               >
                 TikTok
               </a>
